@@ -1,5 +1,8 @@
+import controller.GameController;
+
 public class Backgammon {
     public static void main(String[] args) {
-        System.out.println("Hello world!");
+        GameController gameController = new GameController();
+        gameController.startGame();
     }
 }
