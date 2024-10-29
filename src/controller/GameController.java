@@ -29,13 +29,10 @@ public class GameController {
 
         // Set up players
         System.out.print("Enter Player 1 name: ");
-        String name1 = commandParser.getUserCommand(); // Get user input for Player 1 name
+        String name1 = commandParser.getUserCommand();
         System.out.print("Enter Player 2 name: ");
-        String name2 = commandParser.getUserCommand(); // Get user input for Player 2 name
+        String name2 = commandParser.getUserCommand();
         gameService.setPlayers(name1, name2);
-
-        // Display the initial game state
-        //gameService.displayGameState(); //no need
 
         // Main game loop
         while (true) {
