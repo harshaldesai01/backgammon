@@ -35,7 +35,7 @@ public class GameController {
         gameService.setPlayers(name1, name2);
 
         // Display the initial game state
-        gameService.displayGameState();
+        //gameService.displayGameState(); //no need
 
         // Main game loop
         while (true) {
