@@ -2,5 +2,6 @@ package enums;
 
 public enum CommandType {
     ROLL,
-    QUIT
+    QUIT,
+    HINT;
 }

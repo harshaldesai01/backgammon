@@ -3,6 +3,9 @@ package util;
 import enums.CommandType;
 import exceptions.InvalidCommandException;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import java.util.Scanner;
 
 public class CommandParser {
@@ -19,6 +22,14 @@ public class CommandParser {
         } catch (IllegalArgumentException e) {
             throw new InvalidCommandException("Invalid command: " + input);
         }
+    }
+
+    public List<String> getAvailableCommands() {
+        List<String> commands = new ArrayList<>();
+        for (CommandType type : CommandType.values()) {
+            commands.add(type.name());
+        }
+        return commands;
     }
 
     public void displayError(String message) {
