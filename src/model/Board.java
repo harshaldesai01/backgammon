@@ -21,64 +21,95 @@ public class Board {
     }
 
     public void displayBoard() {
+        int maxCheckers = getMaxCheckersInPosition();
+
         System.out.println("Backgammon Board:");
-        System.out.println("--------------------------------------------------------------------");
+        System.out.println("----------------------------------------------------------------------");
 
         // Top side (points 13 to 24)
+        System.out.print("|");
         for (int i = 13; i <= 24; i++) {
-            System.out.printf(" %2d ", i);
+            System.out.printf(" %2d |", i);
         }
+        // Now print 'OFF' column header for Player 2
+        System.out.print(" OFF |");
         System.out.println();
+        System.out.println("-------------------------------------------------------------------");
 
-        for (int row = 0; row < 5; row++) {
+        for (int row = 0; row < maxCheckers; row++) {
+            System.out.print("|");
             for (int point = 13; point <= 24; point++) {
                 List<Checker> checkers = positions.getOrDefault(point, new ArrayList<>());
                 if (row < checkers.size()) {
-                    System.out.print(checkers.get(row).getOwner() == player1 ? " O " : " X ");
+                    System.out.printf("%3s", checkers.get(row).getOwner() == player1 ? "O" : "X");
                 } else {
                     System.out.print("   ");
                 }
-                System.out.print("|");
+                System.out.print(" |");
+            }
+            // Now print the bear-off checkers for Player 2
+            if (row < bearOffPlayer2.size()) {
+                System.out.print("  X  |"); // Player 2's bear-off checkers
+            } else {
+                System.out.print("     |");
             }
             System.out.println();
         }
 
         // Middle bar
-        System.out.println("---------------------------- BAR ----------------------------");
-
-        // Bottom side (points 12 to 1)
-        for (int i = 12; i >= 1; i--) {
-            System.out.printf(" %2d ", i);
-        }
-        System.out.println();
-
-        for (int row = 0; row < 5; row++) {
-            for (int point = 12; point >= 1; point--) {
-                List<Checker> checkers = positions.getOrDefault(point, new ArrayList<>());
-                if (row < checkers.size()) {
-                    System.out.print(checkers.get(row).getOwner() == player1 ? " O " : " X ");
-                } else {
-                    System.out.print("   ");
-                }
-                System.out.print("|");
-            }
-            System.out.println();
-        }
-
-        System.out.println("--------------------------------------------------------------------");
-
-        // Display bar and bear-off separately if needed
+        System.out.println("------------------------------- BAR -------------------------------");
         System.out.print("Player 1 Bar: ");
         barPlayer1.forEach(c -> System.out.print("O "));
         System.out.print("\nPlayer 2 Bar: ");
         barPlayer2.forEach(c -> System.out.print("X "));
         System.out.println();
+        System.out.println("------------------------------- BAR -------------------------------");
 
-        System.out.print("Player 1 Bear-Off: ");
-        bearOffPlayer1.forEach(c -> System.out.print("O "));
-        System.out.print("\nPlayer 2 Bear-Off: ");
-        bearOffPlayer2.forEach(c -> System.out.print("X "));
+        // Bottom side (points 12 to 1)
+        System.out.print("|");
+        for (int i = 12; i >= 1; i--) {
+            System.out.printf(" %2d |", i);
+        }
+        // Now print 'OFF' column header for Player 1
+        System.out.print(" OFF |");
         System.out.println();
+        System.out.println("-------------------------------------------------------------------");
+
+        for (int row = 0; row < maxCheckers; row++) {
+            System.out.print("|");
+            for (int point = 12; point >= 1; point--) {
+                List<Checker> checkers = positions.getOrDefault(point, new ArrayList<>());
+                if (row > maxCheckers-checkers.size()-1) {
+                    System.out.printf("%3s", checkers.get(maxCheckers-1-row).getOwner() == player1 ? "O" : "X");
+                } else {
+                    System.out.print("   ");
+                }
+                System.out.print(" |");
+            }
+            // Now print the bear-off checkers for Player 1
+            if (row < bearOffPlayer1.size()) {
+                System.out.print("  O  |"); // Player 1's bear-off checkers
+            } else {
+                System.out.print("     |");
+            }
+            System.out.println();
+        }
+
+        System.out.println("----------------------------------------------------------------------");
+
+        // Display bar separately if needed
+
+        System.out.println();
+    }
+
+    private int getMaxCheckersInPosition() {
+        int max = 0;
+        for (List<Checker> checkers : positions.values()) {
+            if (checkers.size() > max) {
+                max = checkers.size();
+            }
+        }
+        return max;
     }
 
     // Initialize the board with checkers owned by specific players
