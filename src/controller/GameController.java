@@ -17,8 +17,8 @@ public class GameController {
     private final CommandParser commandParser;
 
     public GameController() {
-        this.gameService = new GameService();
         this.commandParser = new CommandParser();
+        this.gameService = new GameService();
     }
 
     /**
@@ -27,12 +27,14 @@ public class GameController {
     public void startGame() {
         System.out.println(WELCOME_MESSAGE);
 
-        // Set up players
+        // Collect player names and set up players in GameService
         System.out.print("Enter Player 1 name: ");
         String name1 = commandParser.getUserCommand();
         System.out.print("Enter Player 2 name: ");
         String name2 = commandParser.getUserCommand();
-        gameService.setPlayers(name1, name2);
+        gameService.setUpPlayers(name1, name2);
+
+        gameService.determineStartingPlayer();
 
         // Main game loop
         while (true) {
