@@ -48,6 +48,11 @@ public class GameController {
                     System.out.println(QUIT_MESSAGE);
                     break;
                 }
+                // Check for the HINT command
+                else if (command.getType() == CommandType.HINT) {
+                    displayHint();
+                    continue; // Go to the next iteration after showing the hint
+                }
 
                 // Execute the command in the game service
                 gameService.executeCommand(command.getType());
@@ -69,4 +74,16 @@ public class GameController {
         // Close resources
         commandParser.close();
     }
+
+    /**
+     * Displays a list of available commands.
+     */
+    private void displayHint() {
+        System.out.println("Available commands:");
+        for (String command : commandParser.getAvailableCommands()) {
+            System.out.println("- " + command);
+        }
+    }
+
+
 }
