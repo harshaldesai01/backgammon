@@ -2,16 +2,21 @@ package model;
 
 public class Checker {
     private String color;
+    private final Player owner; // The player who owns this checker
 
-    public Checker(String color) {
+    public Checker(String color, Player owner) {
         this.color = color;
+        this.owner = owner;
     }
 
     public String getColor() {
         return color;
     }
 
-    public void setColor(String color) {
-        this.color = color;
+    /**
+     * Returns the owner of this checker.
+     */
+    public Player getOwner() {
+        return owner;
     }
 }
