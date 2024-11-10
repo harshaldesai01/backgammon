@@ -130,7 +130,11 @@ public class GameService {
 
     private void displayMoveOptions(Player player, int roll1, int roll2) {
         List<String> options = generateMoveOptions(player, roll1, roll2);
-
+        if (options.isEmpty()) {
+            System.out.println("No legal moves available. Turn passes to the next player.");
+            toggleCurrentPlayer();
+            return;
+        }
         // Display options for the player to select
         System.out.println("Select a move option:");
         char optionLetter = 'A';
@@ -147,9 +151,11 @@ public class GameService {
     private List<String> generateMoveOptions(Player player, int roll1, int roll2) {
         List<String> options = new ArrayList<>();
 
+        options = boardService.getBoard().getLegalMoves(player, roll1, roll2);
+
         // Example options based on dice rolls; modify according to game rules
-        options.add("Play " + roll1 + "-" + roll2);
-        options.add("Play " + roll1 + " from one position and " + roll2 + " from another position");
+        //options.add("Play " + roll1 + "-" + roll2);
+        //options.add("Play " + roll1 + " from one position and " + roll2 + " from another position");
 
         // Additional options can be generated based on specific rules of backgammon
         return options;
@@ -166,9 +172,17 @@ public class GameService {
         if (optionIndex >= 0 && optionIndex < options.size()) {
             String chosenMove = options.get(optionIndex);
             System.out.println("You chose: " + chosenMove);
-            // Implement the move execution based on the selected option
+
+            // Parse the chosen move to get fromPosition and toPosition
+            String[] moveParts = chosenMove.split(" -> ");
+            int fromPosition = Integer.parseInt(moveParts[0].trim());
+            int toPosition = Integer.parseInt(moveParts[1].trim());
+
+            // Make the move on the board
+            boardService.getBoard().makeMove(currentPlayer, fromPosition, toPosition);
         } else {
             System.out.println("Invalid selection. Please try again.");
+            // Optionally, you can re-prompt the user for a valid selection
         }
     }
 }
