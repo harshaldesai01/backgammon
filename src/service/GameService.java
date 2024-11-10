@@ -74,8 +74,25 @@ public class GameService {
     }
 
     public boolean isGameOver() {
-        return false; // Placeholder, assuming the game is not over yet
+        if (hasPlayerWon(player1)) {
+            System.out.println("Congratulations " + player1.getName() + ", you have won the game!");
+            return true;
+        } else if (hasPlayerWon(player2)) {
+            System.out.println("Congratulations " + player2.getName() + ", you have won the game!");
+            return true;
+        }
+        return false; // The game is still ongoing
     }
+
+    // Helper method to check if a player has won
+    private boolean hasPlayerWon(Player player) {
+        // Check if the player has no checkers remaining on the board
+        return boardService.getBearOffForPlayer(player).size() + boardService.getPositions().values().stream()
+                .flatMap(List::stream)
+                .filter(checker -> checker.getOwner().equals(player))
+                .count() == 0; // If all checkers are off the board, count should be 0
+    }
+
 
     public void determineStartingPlayer() {
         int rollPlayer1, rollPlayer2;
