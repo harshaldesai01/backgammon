@@ -178,25 +178,12 @@ public class Board {
         }
 
         List<Checker> toCheckers = positions.getOrDefault(toPosition, new ArrayList<>());
-
         Checker movingChecker = fromCheckers.remove(fromCheckers.size() - 1);
         if (fromCheckers.isEmpty()) {
             positions.remove(fromPosition);
         }
 
-        // Check for hits
-        if (!toCheckers.isEmpty() && !toCheckers.get(0).getOwner().equals(player)) {
-            Checker hitChecker = toCheckers.remove(0);
-            if (player == player1) {
-                barPlayer2.add(hitChecker);
-            } else {
-                barPlayer1.add(hitChecker);
-            }
-        }
-
-        // Update the destination position with the moving checker
-        toCheckers.add(movingChecker);
-        positions.put(toPosition, toCheckers);
+        handleHitAndUpdatePosition(player, movingChecker, toCheckers, toPosition);
 
         // Handle bear-off case
         if (isBearOffPosition(player, toPosition)) {
@@ -243,22 +230,25 @@ public class Board {
         List<Checker> bar = (player == player1) ? barPlayer1 : barPlayer2;
         if (!bar.isEmpty()) {
             Checker checker = bar.remove(bar.size() - 1);
-
             List<Checker> toPositionCheckers = positions.getOrDefault(toPosition, new ArrayList<>());
 
-            // Handle hit if necessary
-            if (!toPositionCheckers.isEmpty() && !toPositionCheckers.get(0).getOwner().equals(player)) {
-                Checker hitChecker = toPositionCheckers.remove(0);
-                if (player == player1) {
-                    barPlayer2.add(hitChecker);
-                } else {
-                    barPlayer1.add(hitChecker);
-                }
-            }
-
-            // Place checker on the target position
-            toPositionCheckers.add(checker);
-            positions.put(toPosition, toPositionCheckers);
+            handleHitAndUpdatePosition(player, checker, toPositionCheckers, toPosition);
         }
+    }
+
+    private void handleHitAndUpdatePosition(Player player, Checker movingChecker, List<Checker> toCheckers, int toPosition) {
+        // Check for hits
+        if (!toCheckers.isEmpty() && !toCheckers.get(0).getOwner().equals(player)) {
+            Checker hitChecker = toCheckers.remove(0);
+            if (player == player1) {
+                barPlayer2.add(hitChecker);
+            } else {
+                barPlayer1.add(hitChecker);
+            }
+        }
+
+        // Update the destination position with the moving checker
+        toCheckers.add(movingChecker);
+        positions.put(toPosition, toCheckers);
     }
 }

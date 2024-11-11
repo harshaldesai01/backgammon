@@ -195,17 +195,27 @@ public class GameService {
             System.out.println("You chose: " + chosenMove);
 
             int toPosition;
+            int rollUsed;
+
             if (chosenMove.startsWith("Bar")) {
+                // Handling move from the bar
                 toPosition = Integer.parseInt(chosenMove.split(" -> ")[1].trim());
                 boardService.getBoard().enterFromBar(currentPlayer, toPosition);
+
+                // Calculate rollUsed directly from the destination position for bar entries
+                rollUsed = Math.abs((currentPlayer == player1 ? 25 : 0) - toPosition);
             } else {
+                // Regular move handling
                 String[] moveParts = chosenMove.split(" -> ");
                 int fromPosition = Integer.parseInt(moveParts[0].trim());
                 toPosition = Integer.parseInt(moveParts[1].trim());
                 boardService.getBoard().makeMove(currentPlayer, fromPosition, toPosition);
+
+                // Calculate rollUsed for regular moves
+                rollUsed = Math.abs(toPosition - fromPosition);
             }
 
-            int rollUsed = Math.abs(toPosition - Integer.parseInt(chosenMove.split(" -> ")[0].trim()));
+            // Remove the used roll from rolls list
             rolls.remove(Integer.valueOf(rollUsed));
 
             return true;
