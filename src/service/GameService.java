@@ -43,8 +43,6 @@ public class GameService {
         int roll2 = dice.roll();
         System.out.println(player.getName() + " rolled " + roll1 + " and " + roll2);
 
-        // Log the roll (if there’s a logging mechanism, add it here)
-
         // Display possible moves based on the dice roll
         displayMoveOptions(player, roll1, roll2);
 
@@ -53,9 +51,9 @@ public class GameService {
     }
 
     public void executeCommand(CommandType command) {
-        if (command == CommandType.QUIT) {
-            System.out.println(QUIT_MESSAGE);
-            System.exit(0);
+        if (command == CommandType.PIP) {
+            System.out.println(player1.getName() + "'s pip count: " + calculatePipCount(player1));
+            System.out.println(player2.getName() + "'s pip count: " + calculatePipCount(player2));
         } else if (command == CommandType.ROLL) {
             rollDice(currentPlayer);
         }
@@ -69,8 +67,7 @@ public class GameService {
         System.out.println("\nCurrent Game State:");
         boardService.displayBoard();
         System.out.println("It's " + currentPlayer.getName() + "'s turn.");
-        System.out.println(player1.getName() + "'s pip count: " + calculatePipCount(player1));
-        System.out.println(player2.getName() + "'s pip count: " + calculatePipCount(player2));
+        System.out.println(currentPlayer.getName() + "'s pip count: " + calculatePipCount(currentPlayer));
     }
 
     public boolean isGameOver() {
