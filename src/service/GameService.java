@@ -38,16 +38,13 @@ public class GameService {
         return currentPlayer;
     }
 
-    public void rollDice(Player player) {
+    public void executeRollAndPlay(Player player) {
         int roll1 = dice.roll();
         int roll2 = dice.roll();
         System.out.println(player.getName() + " rolled " + roll1 + " and " + roll2);
 
         // Display possible moves based on the dice roll
-        displayMoveOptions(player, roll1, roll2);
-
-        // Toggle to the other player after rolling and move selection
-        toggleCurrentPlayer();
+        playRoll(player, roll1, roll2);
     }
 
     public void executeCommand(CommandType command) {
@@ -55,7 +52,9 @@ public class GameService {
             System.out.println(player1.getName() + "'s pip count: " + calculatePipCount(player1));
             System.out.println(player2.getName() + "'s pip count: " + calculatePipCount(player2));
         } else if (command == CommandType.ROLL) {
-            rollDice(currentPlayer);
+            executeRollAndPlay(currentPlayer);
+            // Toggle to the other player after rolling and move selection
+            toggleCurrentPlayer();
         }
     }
 
@@ -125,37 +124,53 @@ public class GameService {
         return pipCount;
     }
 
-    private void displayMoveOptions(Player player, int roll1, int roll2) {
-        List<String> options = generateMoveOptions(player, roll1, roll2);
-        if (options.isEmpty()) {
-            System.out.println("No legal moves available. Turn passes to the next player.");
-            toggleCurrentPlayer();
-            return;
-        }
-        // Display options for the player to select
-        System.out.println("Select a move option:");
-        char optionLetter = 'A';
-        for (String option : options) {
-            System.out.println(optionLetter + ") " + option);
-            optionLetter++;
+    private void playRoll(Player player, int roll1, int roll2) {
+        List<Integer> rolls = new ArrayList<>();
+        if (roll1 == roll2) {
+            // Double roll: Add the roll value four times
+            for (int i = 0; i < 4; i++) rolls.add(roll1);
+        } else {
+            // Normal roll: Add both rolls
+            rolls.add(roll1);
+            rolls.add(roll2);
         }
 
-        // Capture the player's selection
-        char selectedOption = getUserSelection();
-        executeSelectedOption(selectedOption, options);
+        while (!rolls.isEmpty()) {
+            List<String> options = generateMoveOptions(player, rolls);
+            if (options.isEmpty()) {
+                System.out.println("No legal moves available for the current rolls. Turn passes to the next player.");
+                break;
+            }
+
+            // Display options for the player to select
+            System.out.println("Available move options for current roll:");
+            char optionLetter = 'A';
+            for (String option : options) {
+                System.out.println(optionLetter + ") " + option);
+                optionLetter++;
+            }
+
+            // Capture the player's selection
+            char selectedOption = getUserSelection();
+            boolean successfulMove = executeSelectedOption(selectedOption, options, rolls);
+
+            if (!successfulMove) {
+                System.out.println("Invalid selection. Please try again.");
+                continue;
+            }
+
+            // After executing a move, re-check the available moves based on the updated board state
+            options = generateMoveOptions(player, rolls);
+            if (options.isEmpty()) {
+                System.out.println("No more moves available for the remaining rolls.");
+                break;
+            }
+        }
     }
 
-    private List<String> generateMoveOptions(Player player, int roll1, int roll2) {
-        List<String> options = new ArrayList<>();
-
-        options = boardService.getBoard().getLegalMoves(player, roll1, roll2);
-
-        // Example options based on dice rolls; modify according to game rules
-        //options.add("Play " + roll1 + "-" + roll2);
-        //options.add("Play " + roll1 + " from one position and " + roll2 + " from another position");
-
-        // Additional options can be generated based on specific rules of backgammon
-        return options;
+    private List<String> generateMoveOptions(Player player, List<Integer> rolls) {
+        // Generate all legal moves based on the current rolls
+        return boardService.getBoard().getLegalMoves(player, rolls);
     }
 
     private char getUserSelection() {
@@ -164,7 +179,7 @@ public class GameService {
         return scanner.next().toUpperCase().charAt(0);
     }
 
-    private void executeSelectedOption(char selectedOption, List<String> options) {
+    private boolean executeSelectedOption(char selectedOption, List<String> options, List<Integer> rolls) {
         int optionIndex = selectedOption - 'A';
         if (optionIndex >= 0 && optionIndex < options.size()) {
             String chosenMove = options.get(optionIndex);
@@ -175,11 +190,15 @@ public class GameService {
             int fromPosition = Integer.parseInt(moveParts[0].trim());
             int toPosition = Integer.parseInt(moveParts[1].trim());
 
-            // Make the move on the board
+            // Execute the move on the board
             boardService.getBoard().makeMove(currentPlayer, fromPosition, toPosition);
-        } else {
-            System.out.println("Invalid selection. Please try again.");
-            // Optionally, you can re-prompt the user for a valid selection
+
+            // Determine which roll was used and remove it from the list
+            int rollUsed = Math.abs(toPosition - fromPosition);
+            rolls.remove(Integer.valueOf(rollUsed));
+
+            return true; // Move was successful
         }
+        return false; // Invalid selection
     }
 }

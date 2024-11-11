@@ -133,21 +133,19 @@ public class Board {
     }
 
     // Get all legal moves based on dice roll and current board state
-    public List<String> getLegalMoves(Player player, int roll1, int roll2) {
+    public List<String> getLegalMoves(Player player, List<Integer> rolls) {
         List<String> legalMoves = new ArrayList<>();
         int direction = (player == player1) ? 1 : -1;
 
         for (int position : positions.keySet()) {
             List<Checker> checkers = positions.get(position);
-            if (!checkers.isEmpty() && checkers.get(0).getOwner().equals(player)) {
-                int targetPosition1 = position + roll1 * direction;
-                int targetPosition2 = position + roll2 * direction;
-
-                if (isLegalMove(player, position, targetPosition1)) {
-                    legalMoves.add(position + " -> " + targetPosition1);
-                }
-                if (isLegalMove(player, position, targetPosition2)) {
-                    legalMoves.add(position + " -> " + targetPosition2);
+            if (!checkers.isEmpty() && checkers.getFirst().getOwner().equals(player)) {
+                // Iterate over each roll in the list to generate moves based on the current board state
+                for (int roll : rolls) {
+                    int targetPosition = position + roll * direction;
+                    if (isLegalMove(player, position, targetPosition)) {
+                        legalMoves.add(position + " -> " + targetPosition);
+                    }
                 }
             }
         }
@@ -156,19 +154,28 @@ public class Board {
 
     // Check if a move is legal by evaluating hits, blockades, and empty positions
     private boolean isLegalMove(Player player, int fromPosition, int toPosition) {
-        if (toPosition < 1 || toPosition > 24) {
+        // Check if the move is within the board boundaries
+        if (toPosition < 1 || toPosition > 24 || fromPosition < 1 || fromPosition > 24) {
             return false; // Outside board limits
         }
+
+        List<Checker> fromPositionCheckers = positions.getOrDefault(fromPosition, new ArrayList<>());
+
+        // Ensure there is at least one checker of the player's color at the fromPosition
+        if (fromPositionCheckers.isEmpty() || !fromPositionCheckers.getFirst().getOwner().equals(player)) {
+            return false; // No checkers to move or checkers at fromPosition don't belong to the player
+        }
+
         List<Checker> targetPositionCheckers = positions.getOrDefault(toPosition, new ArrayList<>());
 
+        // Check the target position
         if (targetPositionCheckers.isEmpty()) {
             return true; // Can move to an empty spot
-        } else if (targetPositionCheckers.get(0).getOwner().equals(player)) {
+        } else if (targetPositionCheckers.getFirst().getOwner().equals(player)) {
             return true; // Can stack on own checkers
-        } else if (targetPositionCheckers.size() == 1) {
-            return true; // Can hit opponent's single checker
+        } else {
+            return targetPositionCheckers.size() == 1; // Can hit opponent's single checker
         }
-        return false; // Cannot move to a spot blocked by two or more opponent checkers
     }
 
     // Update the board to reflect a move, applying hits or bear-offs if needed
