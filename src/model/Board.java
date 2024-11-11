@@ -136,14 +136,18 @@ public class Board {
     public List<String> getLegalMoves(Player player, List<Integer> rolls) {
         List<String> legalMoves = new ArrayList<>();
         int direction = (player == player1) ? 1 : -1;
+        boolean canBearOff = canBearOff(player);
 
         for (int position : positions.keySet()) {
             List<Checker> checkers = positions.get(position);
             if (!checkers.isEmpty() && checkers.get(0).getOwner().equals(player)) {
-                // Iterate over each roll in the list to generate moves based on the current board state
                 for (int roll : rolls) {
                     int targetPosition = position + roll * direction;
-                    if (isLegalMove(player, position, targetPosition)) {
+
+                    // Bear-off condition: allow moves to positions off the board if eligible
+                    if (canBearOff && isBearOffPosition(player, targetPosition)) {
+                        legalMoves.add(position + " -> OFF");
+                    } else if (isLegalMove(player, position, targetPosition)) {
                         legalMoves.add(position + " -> " + targetPosition);
                     }
                 }
@@ -152,21 +156,46 @@ public class Board {
         return legalMoves;
     }
 
+    // Determine if the player is allowed to bear off (all checkers in the home board)
+    private boolean canBearOff(Player player) {
+        int homeStart = (player == player1) ? 19 : 1;
+        int homeEnd = (player == player1) ? 24 : 6;
+
+        for (int position : positions.keySet()) {
+            if (position < homeStart || position > homeEnd) {
+                List<Checker> checkers = positions.get(position);
+                if (!checkers.isEmpty() && checkers.get(0).getOwner().equals(player)) {
+                    return false; // Found a checker outside the home board
+                }
+            }
+        }
+        return true;
+    }
+
     // Check if a move is legal by evaluating hits, blockades, and empty positions
     private boolean isLegalMove(Player player, int fromPosition, int toPosition) {
-        // Check if the move is within the board boundaries
-        if (toPosition < 1 || toPosition > 24 || fromPosition < 1 || fromPosition > 24) {
-            return false; // Outside board limits
+        // Check if the fromPosition is within the board boundaries
+        if (fromPosition < 1 || fromPosition > 24) {
+            return false; // Outside board limits for fromPosition
+        }
+
+        // Check if the toPosition is within the board boundaries
+        if (toPosition < 1 || toPosition > 24) {
+            return false; // Outside board limits for toPosition
         }
 
         List<Checker> fromPositionCheckers = positions.getOrDefault(fromPosition, new ArrayList<>());
+        List<Checker> toPositionCheckers = positions.getOrDefault(toPosition, new ArrayList<>());
 
         // Ensure there is at least one checker of the player's color at the fromPosition
         if (fromPositionCheckers.isEmpty() || !fromPositionCheckers.get(0).getOwner().equals(player)) {
-            return false; // No checkers to move or checkers at fromPosition don't belong to the player
+            return false;
         }
 
-        return canEnterFromBar(player, toPosition);
+        // Allow move if toPosition has no checkers, player's own checkers, or only one checker of the opponent
+        return toPositionCheckers.isEmpty() ||
+                toPositionCheckers.get(0).getOwner().equals(player) ||
+                (toPositionCheckers.size() == 1 && !toPositionCheckers.get(0).getOwner().equals(player));
     }
 
     // Update the board to reflect a move, applying hits or bear-offs if needed
@@ -184,17 +213,6 @@ public class Board {
         }
 
         handleHitAndUpdatePosition(player, movingChecker, toCheckers, toPosition);
-
-        // Handle bear-off case
-        if (isBearOffPosition(player, toPosition)) {
-            if (player == player1) {
-                bearOffPlayer1.add(movingChecker);
-            } else {
-                bearOffPlayer2.add(movingChecker);
-            }
-            toCheckers.remove(movingChecker);
-            positions.put(toPosition, toCheckers);
-        }
     }
 
     private boolean isBearOffPosition(Player player, int position) {
@@ -250,5 +268,31 @@ public class Board {
         // Update the destination position with the moving checker
         toCheckers.add(movingChecker);
         positions.put(toPosition, toCheckers);
+    }
+
+    public void bearOffChecker(Player player, int fromPosition) {
+        List<Checker> fromCheckers = positions.get(fromPosition);
+
+        if (fromCheckers == null || fromCheckers.isEmpty()) {
+            System.out.println("Error: No checkers to bear off from this position.");
+            return;
+        }
+
+        // Remove the checker from the fromPosition
+        Checker movingChecker = fromCheckers.remove(fromCheckers.size() - 1);
+
+        // If the from position is now empty, remove it from positions
+        if (fromCheckers.isEmpty()) {
+            positions.remove(fromPosition);
+        } else {
+            positions.put(fromPosition, fromCheckers);
+        }
+
+        // Add checker to the player's bear-off collection
+        if (player == player1) {
+            bearOffPlayer1.add(movingChecker);
+        } else {
+            bearOffPlayer2.add(movingChecker);
+        }
     }
 }

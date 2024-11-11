@@ -175,7 +175,7 @@ public class GameService {
             int targetPosition = (player == player1) ? (25 - roll) : roll;
             if (targetPosition >= homeStart && targetPosition <= homeEnd) {
                 if (boardService.getBoard().canEnterFromBar(player, targetPosition)) {
-                    barEntryMoves.add("Bar -> " + targetPosition);
+                    barEntryMoves.add("BAR -> " + targetPosition);
                 }
             }
         }
@@ -197,14 +197,21 @@ public class GameService {
             int toPosition;
             int rollUsed;
 
-            if (chosenMove.startsWith("Bar")) {
+            if (chosenMove.startsWith("BAR")) {
                 // Handling move from the bar
                 toPosition = Integer.parseInt(chosenMove.split(" -> ")[1].trim());
                 boardService.getBoard().enterFromBar(currentPlayer, toPosition);
 
                 // Calculate rollUsed directly from the destination position for bar entries
                 rollUsed = Math.abs((currentPlayer == player1 ? 25 : 0) - toPosition);
-            } else {
+            } else if(chosenMove.endsWith("OFF")) {
+                // Bear-off handling
+                int fromPosition = Integer.parseInt(chosenMove.split(" -> ")[0].trim());
+                boardService.getBoard().bearOffChecker(currentPlayer, fromPosition);
+
+                // Calculate rollUsed for bear-off moves
+                rollUsed = Math.abs((currentPlayer == player1 ? 25 : 0) - fromPosition);
+            }else {
                 // Regular move handling
                 String[] moveParts = chosenMove.split(" -> ");
                 int fromPosition = Integer.parseInt(moveParts[0].trim());
