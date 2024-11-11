@@ -139,7 +139,7 @@ public class Board {
 
         for (int position : positions.keySet()) {
             List<Checker> checkers = positions.get(position);
-            if (!checkers.isEmpty() && checkers.getFirst().getOwner().equals(player)) {
+            if (!checkers.isEmpty() && checkers.get(0).getOwner().equals(player)) {
                 // Iterate over each roll in the list to generate moves based on the current board state
                 for (int roll : rolls) {
                     int targetPosition = position + roll * direction;
@@ -162,36 +162,31 @@ public class Board {
         List<Checker> fromPositionCheckers = positions.getOrDefault(fromPosition, new ArrayList<>());
 
         // Ensure there is at least one checker of the player's color at the fromPosition
-        if (fromPositionCheckers.isEmpty() || !fromPositionCheckers.getFirst().getOwner().equals(player)) {
+        if (fromPositionCheckers.isEmpty() || !fromPositionCheckers.get(0).getOwner().equals(player)) {
             return false; // No checkers to move or checkers at fromPosition don't belong to the player
         }
 
-        List<Checker> targetPositionCheckers = positions.getOrDefault(toPosition, new ArrayList<>());
-
-        // Check the target position
-        if (targetPositionCheckers.isEmpty()) {
-            return true; // Can move to an empty spot
-        } else if (targetPositionCheckers.getFirst().getOwner().equals(player)) {
-            return true; // Can stack on own checkers
-        } else {
-            return targetPositionCheckers.size() == 1; // Can hit opponent's single checker
-        }
+        return canEnterFromBar(player, toPosition);
     }
 
     // Update the board to reflect a move, applying hits or bear-offs if needed
     public void makeMove(Player player, int fromPosition, int toPosition) {
         List<Checker> fromCheckers = positions.get(fromPosition);
-        List<Checker> toCheckers = positions.getOrDefault(toPosition, new ArrayList<>());
-
-        Checker movingChecker = fromCheckers.remove(fromCheckers.size() - 1); // Remove the last checker in the list
-        if (!fromCheckers.isEmpty()) {
-            positions.put(fromPosition, fromCheckers); // Update if checkers remain
-        } else {
-            positions.remove(fromPosition); // Clear position if no checkers remain
+        if (fromCheckers == null || fromCheckers.isEmpty()) {
+            System.out.println("Error: No checkers to move from this position.");
+            return;
         }
 
+        List<Checker> toCheckers = positions.getOrDefault(toPosition, new ArrayList<>());
+
+        Checker movingChecker = fromCheckers.remove(fromCheckers.size() - 1);
+        if (fromCheckers.isEmpty()) {
+            positions.remove(fromPosition);
+        }
+
+        // Check for hits
         if (!toCheckers.isEmpty() && !toCheckers.get(0).getOwner().equals(player)) {
-            Checker hitChecker = toCheckers.remove(0); // Hit opponent's checker
+            Checker hitChecker = toCheckers.remove(0);
             if (player == player1) {
                 barPlayer2.add(hitChecker);
             } else {
@@ -199,22 +194,24 @@ public class Board {
             }
         }
 
+        // Update the destination position with the moving checker
         toCheckers.add(movingChecker);
         positions.put(toPosition, toCheckers);
 
-        // Handle bear-off if the checker reaches the end of the board
+        // Handle bear-off case
         if (isBearOffPosition(player, toPosition)) {
             if (player == player1) {
                 bearOffPlayer1.add(movingChecker);
             } else {
                 bearOffPlayer2.add(movingChecker);
             }
-            toCheckers.remove(movingChecker); // Remove checker from board after bear-off
+            toCheckers.remove(movingChecker);
+            positions.put(toPosition, toCheckers);
         }
     }
 
     private boolean isBearOffPosition(Player player, int position) {
-        return (player == player1 && position == 25) || (player == player2 && position == 0);
+        return (player == player1 && position >= 25) || (player == player2 && position <= 0);
     }
 
     public Map<Integer, List<Checker>> getPositions() {
@@ -227,5 +224,41 @@ public class Board {
 
     public List<Checker> getBearOffForPlayer(Player player) {
         return player == player1 ? bearOffPlayer1 : bearOffPlayer2;
+    }
+
+    public boolean canEnterFromBar(Player player, int toPosition) {
+        List<Checker> targetPositionCheckers = positions.getOrDefault(toPosition, new ArrayList<>());
+
+        // Check if the target position is empty, occupied by the player's own checkers, or has a single opponent checker
+        if (targetPositionCheckers.isEmpty()) {
+            return true; // Can enter an empty spot
+        } else if (targetPositionCheckers.get(0).getOwner().equals(player)) {
+            return true; // Can stack on own checkers
+        } else {
+            return targetPositionCheckers.size() == 1; // Can hit a single opponent checker
+        }
+    }
+
+    public void enterFromBar(Player player, int toPosition) {
+        List<Checker> bar = (player == player1) ? barPlayer1 : barPlayer2;
+        if (!bar.isEmpty()) {
+            Checker checker = bar.remove(bar.size() - 1);
+
+            List<Checker> toPositionCheckers = positions.getOrDefault(toPosition, new ArrayList<>());
+
+            // Handle hit if necessary
+            if (!toPositionCheckers.isEmpty() && !toPositionCheckers.get(0).getOwner().equals(player)) {
+                Checker hitChecker = toPositionCheckers.remove(0);
+                if (player == player1) {
+                    barPlayer2.add(hitChecker);
+                } else {
+                    barPlayer1.add(hitChecker);
+                }
+            }
+
+            // Place checker on the target position
+            toPositionCheckers.add(checker);
+            positions.put(toPosition, toPositionCheckers);
+        }
     }
 }
