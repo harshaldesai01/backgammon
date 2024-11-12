@@ -145,14 +145,7 @@ public class GameService {
                 System.out.println("Invalid selection. Please try again.");
                 continue;
             }
-
             displayGameState();
-
-            options = generateMoveOptions(player, rolls);
-            if (options.isEmpty()) {
-                System.out.println("No more moves available for the remaining rolls.");
-                break;
-            }
         }
     }
 
@@ -168,11 +161,11 @@ public class GameService {
     // Helper method to generate moves for re-entering checkers from the bar
     private List<String> generateBarEntryMoves(Player player, List<Integer> rolls) {
         List<String> barEntryMoves = new ArrayList<>();
-        int homeStart = (player == player1) ? 19 : 1;
-        int homeEnd = (player == player1) ? 24 : 6;
+        int homeStart = (player == player1) ? 1 : 19;
+        int homeEnd = (player == player1) ? 6 : 24;
 
         for (int roll : rolls) {
-            int targetPosition = (player == player1) ? (25 - roll) : roll;
+            int targetPosition = (player == player1) ? roll : (25 - roll);
             if (targetPosition >= homeStart && targetPosition <= homeEnd) {
                 if (boardService.getBoard().canEnterFromBar(player, targetPosition)) {
                     barEntryMoves.add("BAR -> " + targetPosition);
@@ -203,15 +196,15 @@ public class GameService {
                 boardService.getBoard().enterFromBar(currentPlayer, toPosition);
 
                 // Calculate rollUsed directly from the destination position for bar entries
-                rollUsed = Math.abs((currentPlayer == player1 ? 25 : 0) - toPosition);
+                rollUsed = Math.abs((currentPlayer == player1 ? 0 : 25) - toPosition);
             } else if(chosenMove.endsWith("OFF")) {
                 // Bear-off handling
                 int fromPosition = Integer.parseInt(chosenMove.split(" -> ")[0].trim());
                 boardService.getBoard().bearOffChecker(currentPlayer, fromPosition);
 
                 // Calculate rollUsed for bear-off moves
-                rollUsed = Math.abs((currentPlayer == player1 ? 25 : 0) - fromPosition);
-            }else {
+                rollUsed = Math.abs((currentPlayer == player1 ? 0 : 25) - fromPosition);
+            } else {
                 // Regular move handling
                 String[] moveParts = chosenMove.split(" -> ");
                 int fromPosition = Integer.parseInt(moveParts[0].trim());
