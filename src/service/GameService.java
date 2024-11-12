@@ -9,8 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-import static util.CommonConstants.QUIT_MESSAGE;
-
 public class GameService {
     private BoardService boardService;
     private final Dice dice = new Dice();
@@ -22,9 +20,6 @@ public class GameService {
         // GameService constructor does not need CommandParser
     }
 
-    /**
-     * Sets up players with their names and initializes BoardService with players.
-     */
     public void setUpPlayers(String name1, String name2) {
         player1 = new Player(name1);
         player2 = new Player(name2);
@@ -38,16 +33,12 @@ public class GameService {
         return currentPlayer;
     }
 
-    public void rollDice(Player player) {
+    public void executeRollAndPlay(Player player) {
         int roll1 = dice.roll();
         int roll2 = dice.roll();
         System.out.println(player.getName() + " rolled " + roll1 + " and " + roll2);
 
-        // Display possible moves based on the dice roll
-        displayMoveOptions(player, roll1, roll2);
-
-        // Toggle to the other player after rolling and move selection
-        toggleCurrentPlayer();
+        playRoll(player, roll1, roll2);
     }
 
     public void executeCommand(CommandType command) {
@@ -55,7 +46,9 @@ public class GameService {
             System.out.println(player1.getName() + "'s pip count: " + calculatePipCount(player1));
             System.out.println(player2.getName() + "'s pip count: " + calculatePipCount(player2));
         } else if (command == CommandType.ROLL) {
-            rollDice(currentPlayer);
+            executeRollAndPlay(currentPlayer);
+            displayGameState();
+            toggleCurrentPlayer();
         }
     }
 
@@ -78,18 +71,15 @@ public class GameService {
             System.out.println("Congratulations " + player2.getName() + ", you have won the game!");
             return true;
         }
-        return false; // The game is still ongoing
+        return false;
     }
 
-    // Helper method to check if a player has won
     private boolean hasPlayerWon(Player player) {
-        // Check if the player has no checkers remaining on the board
         return boardService.getBearOffForPlayer(player).size() + boardService.getPositions().values().stream()
                 .flatMap(List::stream)
                 .filter(checker -> checker.getOwner().equals(player))
-                .count() == 0; // If all checkers are off the board, count should be 0
+                .count() == 0;
     }
-
 
     public void determineStartingPlayer() {
         int rollPlayer1, rollPlayer2;
@@ -125,37 +115,64 @@ public class GameService {
         return pipCount;
     }
 
-    private void displayMoveOptions(Player player, int roll1, int roll2) {
-        List<String> options = generateMoveOptions(player, roll1, roll2);
-        if (options.isEmpty()) {
-            System.out.println("No legal moves available. Turn passes to the next player.");
-            toggleCurrentPlayer();
-            return;
-        }
-        // Display options for the player to select
-        System.out.println("Select a move option:");
-        char optionLetter = 'A';
-        for (String option : options) {
-            System.out.println(optionLetter + ") " + option);
-            optionLetter++;
+    private void playRoll(Player player, int roll1, int roll2) {
+        List<Integer> rolls = new ArrayList<>();
+        if (roll1 == roll2) {
+            for (int i = 0; i < 4; i++) rolls.add(roll1);
+        } else {
+            rolls.add(roll1);
+            rolls.add(roll2);
         }
 
-        // Capture the player's selection
-        char selectedOption = getUserSelection();
-        executeSelectedOption(selectedOption, options);
+        while (!rolls.isEmpty()) {
+            List<String> options = generateMoveOptions(player, rolls);
+            if (options.isEmpty()) {
+                System.out.println("No legal moves available for the current rolls. Turn passes to the next player.");
+                break;
+            }
+
+            System.out.println("Available move options for current roll:");
+            char optionLetter = 'A';
+            for (String option : options) {
+                System.out.println(optionLetter + ") " + option);
+                optionLetter++;
+            }
+
+            char selectedOption = getUserSelection();
+            boolean successfulMove = executeSelectedOption(selectedOption, options, rolls);
+
+            if (!successfulMove) {
+                System.out.println("Invalid selection. Please try again.");
+                continue;
+            }
+            displayGameState();
+        }
     }
 
-    private List<String> generateMoveOptions(Player player, int roll1, int roll2) {
-        List<String> options = new ArrayList<>();
+    private List<String> generateMoveOptions(Player player, List<Integer> rolls) {
+        // Check if the player has checkers on the bar
+        List<Checker> barCheckers = boardService.getBoard().getBarForPlayer(player);
+        if (!barCheckers.isEmpty()) {
+            return generateBarEntryMoves(player, rolls); // Only allow bar re-entry moves
+        }
+        return boardService.getBoard().getLegalMoves(player, rolls); // Regular move generation otherwise
+    }
 
-        options = boardService.getBoard().getLegalMoves(player, roll1, roll2);
+    // Helper method to generate moves for re-entering checkers from the bar
+    private List<String> generateBarEntryMoves(Player player, List<Integer> rolls) {
+        List<String> barEntryMoves = new ArrayList<>();
+        int homeStart = (player == player1) ? 1 : 19;
+        int homeEnd = (player == player1) ? 6 : 24;
 
-        // Example options based on dice rolls; modify according to game rules
-        //options.add("Play " + roll1 + "-" + roll2);
-        //options.add("Play " + roll1 + " from one position and " + roll2 + " from another position");
-
-        // Additional options can be generated based on specific rules of backgammon
-        return options;
+        for (int roll : rolls) {
+            int targetPosition = (player == player1) ? roll : (25 - roll);
+            if (targetPosition >= homeStart && targetPosition <= homeEnd) {
+                if (boardService.getBoard().canEnterFromBar(player, targetPosition)) {
+                    barEntryMoves.add("BAR -> " + targetPosition);
+                }
+            }
+        }
+        return barEntryMoves;
     }
 
     private char getUserSelection() {
@@ -164,22 +181,45 @@ public class GameService {
         return scanner.next().toUpperCase().charAt(0);
     }
 
-    private void executeSelectedOption(char selectedOption, List<String> options) {
+    private boolean executeSelectedOption(char selectedOption, List<String> options, List<Integer> rolls) {
         int optionIndex = selectedOption - 'A';
         if (optionIndex >= 0 && optionIndex < options.size()) {
             String chosenMove = options.get(optionIndex);
             System.out.println("You chose: " + chosenMove);
 
-            // Parse the chosen move to get fromPosition and toPosition
-            String[] moveParts = chosenMove.split(" -> ");
-            int fromPosition = Integer.parseInt(moveParts[0].trim());
-            int toPosition = Integer.parseInt(moveParts[1].trim());
+            int toPosition;
+            int rollUsed;
 
-            // Make the move on the board
-            boardService.getBoard().makeMove(currentPlayer, fromPosition, toPosition);
-        } else {
-            System.out.println("Invalid selection. Please try again.");
-            // Optionally, you can re-prompt the user for a valid selection
+            if (chosenMove.startsWith("BAR")) {
+                // Handling move from the bar
+                toPosition = Integer.parseInt(chosenMove.split(" -> ")[1].trim());
+                boardService.getBoard().enterFromBar(currentPlayer, toPosition);
+
+                // Calculate rollUsed directly from the destination position for bar entries
+                rollUsed = Math.abs((currentPlayer == player1 ? 0 : 25) - toPosition);
+            } else if(chosenMove.endsWith("OFF")) {
+                // Bear-off handling
+                int fromPosition = Integer.parseInt(chosenMove.split(" -> ")[0].trim());
+                boardService.getBoard().bearOffChecker(currentPlayer, fromPosition);
+
+                // Calculate rollUsed for bear-off moves
+                rollUsed = Math.abs((currentPlayer == player1 ? 0 : 25) - fromPosition);
+            } else {
+                // Regular move handling
+                String[] moveParts = chosenMove.split(" -> ");
+                int fromPosition = Integer.parseInt(moveParts[0].trim());
+                toPosition = Integer.parseInt(moveParts[1].trim());
+                boardService.getBoard().makeMove(currentPlayer, fromPosition, toPosition);
+
+                // Calculate rollUsed for regular moves
+                rollUsed = Math.abs(toPosition - fromPosition);
+            }
+
+            // Remove the used roll from rolls list
+            rolls.remove(Integer.valueOf(rollUsed));
+
+            return true;
         }
+        return false;
     }
 }

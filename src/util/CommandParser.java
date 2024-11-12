@@ -16,15 +16,6 @@ public class CommandParser {
 
     public Command parseCommand(String command) throws InvalidCommandException {
         command = command.trim().toUpperCase();
-
-        // Map shortcuts to actual commands
-        switch (command) {
-            case "Q" -> command = "QUIT";
-            case "R" -> command = "ROLL";
-            case "H" -> command = "HINT";
-            case "P" -> command = "PIP";
-        }
-
         try {
             CommandType type = CommandType.valueOf(command);
             return new Command(type, null); // No parameters needed, so we pass null
