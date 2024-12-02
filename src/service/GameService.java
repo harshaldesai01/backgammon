@@ -10,30 +10,66 @@ import java.util.List;
 import java.util.Scanner;
 
 public class GameService {
+    private final MatchManager matchManager;
     private BoardService boardService;
-    private final Dice dice = new Dice();
-    private Player player1;
-    private Player player2;
     private Player currentPlayer;
+    private final Dice dice = new Dice();
 
-    public GameService() {
-        // GameService constructor does not need CommandParser
+    public GameService(MatchManager matchManager) {
+        this.matchManager = matchManager;
     }
 
-    public void setUpPlayers(String name1, String name2) {
-        player1 = new Player(name1);
-        player2 = new Player(name2);
-        currentPlayer = player1; // Initialize with player1 as the current player
-
-        // Initialize BoardService with player1 and player2
-        this.boardService = new BoardService(player1, player2);
+    public void setUpGame() {
+        boardService = new BoardService(matchManager.getPlayer1(), matchManager.getPlayer2());
+        determineStartingPlayer();
     }
 
-    public Player getCurrentPlayer() {
-        return currentPlayer;
+    public void executeCommand(CommandType command) {
+        switch (command) {
+            case ROLL -> {
+                executeRollAndPlay(currentPlayer);
+                displayGameState();
+                toggleCurrentPlayer();
+            }
+            case PIP -> displayPipCounts();
+            case END_MATCH -> handleEndMatch();
+            default -> System.out.println("Unknown command. Please try again.");
+        }
     }
 
-    public void executeRollAndPlay(Player player) {
+
+    public void updateScore() {
+        if (hasPlayerWon(matchManager.getPlayer1())) {
+            matchManager.incrementScore(matchManager.getPlayer1());
+        } else if (hasPlayerWon(matchManager.getPlayer2())) {
+            matchManager.incrementScore(matchManager.getPlayer2());
+        }
+    }
+
+    public boolean isGameOver() {
+        if (hasPlayerWon(matchManager.getPlayer1())) {
+            System.out.println("Congratulations " + matchManager.getPlayer1().getName() + ", you have won the game!");
+            return true;
+        } else if (hasPlayerWon(matchManager.getPlayer2())) {
+            System.out.println("Congratulations " + matchManager.getPlayer2().getName() + ", you have won the game!");
+            return true;
+        }
+        return false;
+    }
+
+    public void displayGameState() {
+        System.out.println("\nMatch State:");
+        System.out.println(matchManager.getPlayer1().getName() + " Score: " + matchManager.getPlayer1Score());
+        System.out.println(matchManager.getPlayer2().getName() + " Score: " + matchManager.getPlayer2Score());
+        System.out.println("Match Length: " + matchManager.getMatchLength());
+
+        System.out.println("\nCurrent Game State:");
+        boardService.displayBoard();
+        System.out.println("It's " + currentPlayer.getName() + "'s turn.");
+        System.out.println(currentPlayer.getName() + "'s pip count: " + calculatePipCount(currentPlayer));
+    }
+
+    private void executeRollAndPlay(Player player) {
         int roll1 = dice.roll();
         int roll2 = dice.roll();
         System.out.println(player.getName() + " rolled " + roll1 + " and " + roll2);
@@ -41,37 +77,34 @@ public class GameService {
         playRoll(player, roll1, roll2);
     }
 
-    public void executeCommand(CommandType command) {
-        if (command == CommandType.PIP) {
-            System.out.println(player1.getName() + "'s pip count: " + calculatePipCount(player1));
-            System.out.println(player2.getName() + "'s pip count: " + calculatePipCount(player2));
-        } else if (command == CommandType.ROLL) {
-            executeRollAndPlay(currentPlayer);
-            displayGameState();
-            toggleCurrentPlayer();
-        }
+    private void displayPipCounts() {
+        System.out.println(matchManager.getPlayer1().getName() + "'s pip count: " + calculatePipCount(matchManager.getPlayer1()));
+        System.out.println(matchManager.getPlayer2().getName() + "'s pip count: " + calculatePipCount(matchManager.getPlayer2()));
+    }
+
+    private void determineStartingPlayer() {
+        int rollPlayer1, rollPlayer2;
+        System.out.println("Rolling dice to determine who goes first...");
+        do {
+            rollPlayer1 = dice.roll();
+            rollPlayer2 = dice.roll();
+            System.out.println(matchManager.getPlayer1().getName() + " rolled: " + rollPlayer1);
+            System.out.println(matchManager.getPlayer2().getName() + " rolled: " + rollPlayer2);
+
+            if (rollPlayer1 > rollPlayer2) {
+                currentPlayer = matchManager.getPlayer1();
+                System.out.println(currentPlayer.getName() + " goes first!");
+            } else if (rollPlayer2 > rollPlayer1) {
+                currentPlayer = matchManager.getPlayer2();
+                System.out.println(currentPlayer.getName() + " goes first!");
+            } else {
+                System.out.println("It's a tie! Rolling again...");
+            }
+        } while (rollPlayer1 == rollPlayer2);
     }
 
     private void toggleCurrentPlayer() {
-        currentPlayer = (currentPlayer == player1) ? player2 : player1;
-    }
-
-    public void displayGameState() {
-        System.out.println("\nCurrent Game State:");
-        boardService.displayBoard();
-        System.out.println("It's " + currentPlayer.getName() + "'s turn.");
-        System.out.println(currentPlayer.getName() + "'s pip count: " + calculatePipCount(currentPlayer));
-    }
-
-    public boolean isGameOver() {
-        if (hasPlayerWon(player1)) {
-            System.out.println("Congratulations " + player1.getName() + ", you have won the game!");
-            return true;
-        } else if (hasPlayerWon(player2)) {
-            System.out.println("Congratulations " + player2.getName() + ", you have won the game!");
-            return true;
-        }
-        return false;
+        currentPlayer = currentPlayer.equals(matchManager.getPlayer1()) ? matchManager.getPlayer2() : matchManager.getPlayer1();
     }
 
     private boolean hasPlayerWon(Player player) {
@@ -81,29 +114,9 @@ public class GameService {
                 .count() == 0;
     }
 
-    public void determineStartingPlayer() {
-        int rollPlayer1, rollPlayer2;
-        System.out.println("Rolling dice to determine who goes first...");
-        do {
-            rollPlayer1 = dice.roll();
-            rollPlayer2 = dice.roll();
-            System.out.println(player1.getName() + " rolled: " + rollPlayer1);
-            System.out.println(player2.getName() + " rolled: " + rollPlayer2);
-            if (rollPlayer1 > rollPlayer2) {
-                currentPlayer = player1;
-                System.out.println(player1.getName() + " goes first!");
-            } else if (rollPlayer2 > rollPlayer1) {
-                currentPlayer = player2;
-                System.out.println(player2.getName() + " goes first!");
-            } else {
-                System.out.println("It's a tie! Rolling again...");
-            }
-        } while (rollPlayer1 == rollPlayer2);
-    }
-
     private int calculatePipCount(Player player) {
         int pipCount = 0;
-        int direction = (player == player1) ? 1 : -1;
+        int direction = (player == matchManager.getPlayer1()) ? 1 : -1;
         for (int position : boardService.getBoard().getPositions().keySet()) {
             List<Checker> checkers = boardService.getBoard().getPositions().get(position);
             for (Checker checker : checkers) {
@@ -161,11 +174,11 @@ public class GameService {
     // Helper method to generate moves for re-entering checkers from the bar
     private List<String> generateBarEntryMoves(Player player, List<Integer> rolls) {
         List<String> barEntryMoves = new ArrayList<>();
-        int homeStart = (player == player1) ? 1 : 19;
-        int homeEnd = (player == player1) ? 6 : 24;
+        int homeStart = (player == matchManager.getPlayer1()) ? 1 : 19;
+        int homeEnd = (player == matchManager.getPlayer1()) ? 6 : 24;
 
         for (int roll : rolls) {
-            int targetPosition = (player == player1) ? roll : (25 - roll);
+            int targetPosition = (player == matchManager.getPlayer1()) ? roll : (25 - roll);
             if (targetPosition >= homeStart && targetPosition <= homeEnd) {
                 if (boardService.getBoard().canEnterFromBar(player, targetPosition)) {
                     barEntryMoves.add("BAR -> " + targetPosition);
@@ -175,6 +188,13 @@ public class GameService {
         return barEntryMoves;
     }
 
+    private void handleEndMatch() {
+        Player highestScorer = matchManager.getPlayer1Score() > matchManager.getPlayer2Score()
+                ? matchManager.getPlayer1()
+                : matchManager.getPlayer2();
+        matchManager.incrementScore(highestScorer);
+        System.out.println("Match ended early. " + highestScorer.getName() + " is awarded 1 point!");
+    }
     private char getUserSelection() {
         Scanner scanner = new Scanner(System.in);
         System.out.print("Enter the option letter: ");
@@ -196,14 +216,14 @@ public class GameService {
                 boardService.getBoard().enterFromBar(currentPlayer, toPosition);
 
                 // Calculate rollUsed directly from the destination position for bar entries
-                rollUsed = Math.abs((currentPlayer == player1 ? 0 : 25) - toPosition);
+                rollUsed = Math.abs((currentPlayer == matchManager.getPlayer1() ? 0 : 25) - toPosition);
             } else if(chosenMove.endsWith("OFF")) {
                 // Bear-off handling
                 int fromPosition = Integer.parseInt(chosenMove.split(" -> ")[0].trim());
                 boardService.getBoard().bearOffChecker(currentPlayer, fromPosition);
 
                 // Calculate rollUsed for bear-off moves
-                rollUsed = Math.abs((currentPlayer == player1 ? 0 : 25) - fromPosition);
+                rollUsed = Math.abs((currentPlayer == matchManager.getPlayer1() ? 0 : 25) - fromPosition);
             } else {
                 // Regular move handling
                 String[] moveParts = chosenMove.split(" -> ");

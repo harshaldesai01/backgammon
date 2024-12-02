@@ -3,87 +3,120 @@ package controller;
 import enums.CommandType;
 import exceptions.InvalidCommandException;
 import exceptions.InvalidMoveException;
+import model.Player;
 import service.GameService;
+import service.MatchManager;
 import util.Command;
 import util.CommandParser;
 
 import static util.CommonConstants.*;
 
-/**
- * Class to control the game flow.
- */
 public class GameController {
-    private final GameService gameService;
     private final CommandParser commandParser;
+    private MatchManager matchManager;
+    private GameService gameService;
 
     public GameController() {
         this.commandParser = new CommandParser();
-        this.gameService = new GameService();
     }
 
-    /**
-     * Method containing logic for the game flow. Takes input from the user & executes the command.
-     */
     public void startGame() {
         System.out.println(WELCOME_MESSAGE);
 
-        // Collect player names and set up players in GameService
+        setupNewMatch();
+
+        while (true) {
+            playMatch();
+
+            System.out.println("Match Over! " + matchManager.getWinnerName() + " wins the match!");
+
+            System.out.print("Would you like to start a new match? (yes/no): ");
+            String response = commandParser.getUserInput().toLowerCase();
+            if (response.equals("yes")) {
+                setupNewMatch();
+            } else {
+                System.out.println("Thank you for playing Backgammon!");
+                commandParser.close();
+                break;
+            }
+        }
+    }
+
+    private void setupNewMatch() {
+        if (matchManager != null) {
+            Player highestScorer = matchManager.getPlayer1Score() > matchManager.getPlayer2Score()
+                    ? matchManager.getPlayer1()
+                    : matchManager.getPlayer2();
+            matchManager.incrementScore(highestScorer);
+            System.out.println("Current match ended. " + highestScorer.getName() + " is awarded 1 point!");
+        }
+
         System.out.print("Enter Player 1 name: ");
-        String name1 = commandParser.getUserCommand();
+        String name1 = commandParser.getUserInput();
         System.out.print("Enter Player 2 name: ");
-        String name2 = commandParser.getUserCommand();
-        gameService.setUpPlayers(name1, name2);
+        String name2 = commandParser.getUserInput();
+        System.out.print("Enter the match length (e.g., 3, 5, 7): ");
+        int matchLength = Integer.parseInt(commandParser.getUserInput());
 
-        gameService.determineStartingPlayer();
+        matchManager = new MatchManager(name1, name2, matchLength);
+        gameService = new GameService(matchManager);
+    }
 
-        // Main game loop
+    private void playMatch() {
+        while (!matchManager.isMatchOver()) {
+            playSingleGame();
+            gameService.updateScore();
+        }
+    }
+
+    private void playSingleGame() {
+        gameService.setUpGame();
+
         while (true) {
             try {
-                // Display game state
                 gameService.displayGameState();
 
-                // Parse and execute user command
-                Command command = commandParser.parseCommand(commandParser.getUserCommand());
+                String input = commandParser.getUserInput();
+                Command command = commandParser.parseCommand(input);
+
                 if (command.getType() == CommandType.QUIT) {
                     System.out.println(QUIT_MESSAGE);
-                    break;
-                }
-                // Check for the HINT command
-                else if (command.getType() == CommandType.HINT) {
+                    return;
+                } else if (command.getType() == CommandType.HINT) {
                     displayHint();
-                    continue; // Go to the next iteration after showing the hint
+                } else if (command.getType() == CommandType.END_MATCH) {
+                    System.out.println("Ending the current match...");
+                    handleEndMatch();
+                    return;
+                } else {
+                    gameService.executeCommand(command.getType());
                 }
 
-                // Execute the command in the game service
-                gameService.executeCommand(command.getType());
-
-                // Check if game is over
                 if (gameService.isGameOver()) {
                     gameService.displayGameState();
                     System.out.println(GAME_WON_MESSAGE);
                     break;
                 }
-
             } catch (InvalidCommandException e) {
-                commandParser.displayError(e.getMessage());
+                System.out.println(e.getMessage());
             } catch (InvalidMoveException e) {
                 System.out.println("Invalid move: " + e.getMessage());
             }
         }
-
-        // Close resources
-        commandParser.close();
     }
 
-    /**
-     * Displays a list of available commands.
-     */
+    private void handleEndMatch() {
+        Player highestScorer = matchManager.getPlayer1Score() > matchManager.getPlayer2Score()
+                ? matchManager.getPlayer1()
+                : matchManager.getPlayer2();
+        matchManager.incrementScore(highestScorer);
+        System.out.println("Match ended early. " + highestScorer.getName() + " is awarded 1 point!");
+    }
+
     private void displayHint() {
         System.out.println("Available commands:");
-        for (String command : commandParser.getAvailableCommands()) {
-            System.out.println("- " + command);
+        for (CommandType type : CommandType.values()) {
+            System.out.println("- " + type.name());
         }
     }
-
-
 }

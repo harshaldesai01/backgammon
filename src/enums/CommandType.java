@@ -4,5 +4,6 @@ public enum CommandType {
     ROLL,
     QUIT,
     HINT,
-    PIP
+    PIP,
+    END_MATCH
 }
