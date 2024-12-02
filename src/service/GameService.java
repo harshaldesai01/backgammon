@@ -47,7 +47,14 @@ public class GameService {
     }
 
     public boolean isGameOver() {
-        return hasPlayerWon(matchManager.getPlayer1()) || hasPlayerWon(matchManager.getPlayer2());
+        if (hasPlayerWon(matchManager.getPlayer1())) {
+            System.out.println("Congratulations " + matchManager.getPlayer1().getName() + ", you have won the game!");
+            return true;
+        } else if (hasPlayerWon(matchManager.getPlayer2())) {
+            System.out.println("Congratulations " + matchManager.getPlayer2().getName() + ", you have won the game!");
+            return true;
+        }
+        return false;
     }
 
     public void displayGameState() {
