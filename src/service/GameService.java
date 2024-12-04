@@ -12,8 +12,8 @@ import util.CommandParser;
 import util.CommonConstants;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Scanner;
 
 public class GameService {
     private final MatchManager matchManager;
@@ -21,6 +21,7 @@ public class GameService {
     private Player currentPlayer;
     private final Dice dice = new Dice();
     private final DoublingCube doublingCube;
+    private final CommandParser commandParser = new CommandParser();
 
     public GameService(MatchManager matchManager) {
         this.matchManager = matchManager;
@@ -222,7 +223,7 @@ public class GameService {
                 optionLetter++;
             }
 
-            char selectedOption = getUserSelection();
+            char selectedOption = getUserSelection(options.size());
             boolean successfulMove = executeSelectedOption(selectedOption, options, rolls);
 
             if (!successfulMove) {
@@ -237,9 +238,13 @@ public class GameService {
         // Check if the player has checkers on the bar
         List<Checker> barCheckers = boardService.getBoard().getBarForPlayer(player);
         if (!barCheckers.isEmpty()) {
-            return generateBarEntryMoves(player, rolls); // Only allow bar re-entry moves
+            return deDuplicateMoves(generateBarEntryMoves(player, rolls)); // Only allow bar re-entry moves
         }
-        return boardService.getBoard().getLegalMoves(player, rolls); // Regular move generation otherwise
+        return deDuplicateMoves(boardService.getBoard().getLegalMoves(player, rolls)); // Regular move generation otherwise
+    }
+
+    private List<String> deDuplicateMoves(List<String> allMoves) {
+        return new ArrayList<>(new HashSet<>(allMoves));
     }
 
     // Helper method to generate moves for re-entering checkers from the bar
@@ -266,10 +271,25 @@ public class GameService {
         matchManager.incrementScore(highestScorer, CommonConstants.SINGLE);
         System.out.println("Match ended early. " + highestScorer.getName() + " is awarded 1 point!");
     }
-    private char getUserSelection() {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter the option letter: ");
-        return scanner.next().toUpperCase().charAt(0);
+    private char getUserSelection(int numOptions) {
+        while (true) {
+            try {
+                System.out.print("Enter the option letter: ");
+                String input = commandParser.getUserInput();
+
+                // Ensure input is a single letter and falls within valid range
+                if (input.length() == 1) {
+                    char selectedOption = Character.toUpperCase(input.charAt(0));
+                    if (selectedOption >= 'A' && selectedOption < ('A' + numOptions)) {
+                        return selectedOption;
+                    }
+                }
+
+                System.out.println("Invalid input. Please select a letter from A to " + (char) ('A' + numOptions - 1) + ".");
+            } catch (Exception e) {
+                System.out.println("Error reading input. Please try again.");
+            }
+        }
     }
 
     private boolean executeSelectedOption(char selectedOption, List<String> options, List<Integer> rolls) {
@@ -327,7 +347,6 @@ public class GameService {
         System.out.printf("%s offers to double the stakes to %d.%n", currentPlayer.getName(), doublingCube.getValue() * 2);
 
         Player opponent = getOpponentPlayer();
-        CommandParser commandParser = new CommandParser();
 
         while (true) {
             currentPlayer = opponent;
