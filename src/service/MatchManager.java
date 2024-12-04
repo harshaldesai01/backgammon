@@ -8,6 +8,9 @@ public class MatchManager {
     private int player1Score = 0;
     private int player2Score = 0;
     private int matchLength;
+    private boolean doublingOffered = false;
+    private Player playerToRespond;
+    private boolean gameOver = false;
 
     public MatchManager(String name1, String name2, int matchLength) {
         this.player1 = new Player(name1);
@@ -23,11 +26,11 @@ public class MatchManager {
         return player2;
     }
 
-    public void incrementScore(Player player) {
+    public void incrementScore(Player player, int points) {
         if (player.equals(player1)) {
-            player1Score++;
+            player1Score += points;
         } else if (player.equals(player2)) {
-            player2Score++;
+            player2Score += points;
         }
     }
 
@@ -50,4 +53,29 @@ public class MatchManager {
     public int getMatchLength() {
         return matchLength;
     }
+
+    public boolean isDoublingOffered() {
+        return doublingOffered;
+    }
+
+    public void setDoublingOffered(boolean doublingOffered) {
+        this.doublingOffered = doublingOffered;
+    }
+
+    public Player getPlayerToRespond() {
+        return playerToRespond;
+    }
+
+    public void setPlayerToRespond(Player playerToRespond) {
+        this.playerToRespond = playerToRespond;
+    }
+
+    public boolean isGameOver() {
+        return gameOver;
+    }
+
+    public void setGameOver(boolean gameOver) {
+        this.gameOver = gameOver;
+    }
+
 }
