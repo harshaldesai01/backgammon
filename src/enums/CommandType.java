@@ -5,5 +5,8 @@ public enum CommandType {
     QUIT,
     HINT,
     PIP,
-    END_MATCH
+    END_MATCH,
+    DOUBLE,
+    ACCEPT,
+    REFUSE
 }

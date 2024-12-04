@@ -1,9 +1,15 @@
 package service;
 
 import enums.CommandType;
+import exceptions.InvalidCommandException;
+import exceptions.InvalidMoveException;
 import model.Checker;
 import model.Dice;
+import model.DoublingCube;
 import model.Player;
+import util.Command;
+import util.CommandParser;
+import util.CommonConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,9 +20,11 @@ public class GameService {
     private BoardService boardService;
     private Player currentPlayer;
     private final Dice dice = new Dice();
+    private final DoublingCube doublingCube;
 
     public GameService(MatchManager matchManager) {
         this.matchManager = matchManager;
+        this.doublingCube = new DoublingCube();
     }
 
     public void setUpGame() {
@@ -39,11 +47,68 @@ public class GameService {
 
 
     public void updateScore() {
-        if (hasPlayerWon(matchManager.getPlayer1())) {
-            matchManager.incrementScore(matchManager.getPlayer1());
-        } else if (hasPlayerWon(matchManager.getPlayer2())) {
-            matchManager.incrementScore(matchManager.getPlayer2());
+        Player winner = currentPlayer;
+        Player loser = getOpponentPlayer();
+
+        int points = calculatePoints(winner, loser);
+
+        System.out.printf("%s wins the game and scores %d point(s)!%n", winner.getName(), points);
+        matchManager.incrementScore(winner, points);
+        doublingCube.reset();
+    }
+
+    private int calculatePoints(Player winner, Player loser) {
+        int basePoints = doublingCube.getValue();
+        if (isBackgammon(loser)) {
+            System.out.printf("Backgammon! %s scores triple points!%n", winner.getName());
+            return basePoints * CommonConstants.BACKGAMMON;
+        } else if (isGammon(loser)) {
+            System.out.printf("Gammon! %s scores double points!%n", winner.getName());
+            return basePoints * CommonConstants.GAMMON;
         }
+        return basePoints;
+    }
+
+
+    private boolean isGammon(Player player) {
+        // The opponent has not borne off any checkers
+        return boardService.getBoard().getBearOffForPlayer(player).isEmpty();
+    }
+
+    private boolean isBackgammon(Player player) {
+        // The opponent has not borne off any checkers
+        // AND has checkers on the bar or in the winner's home board
+        if (!isGammon(player)) {
+            return false;
+        }
+
+        boolean hasCheckersOnBar = !boardService.getBoard().getBarForPlayer(player).isEmpty();
+        boolean hasCheckersInWinnerHomeBoard = hasCheckersInHomeBoard(player, currentPlayer);
+
+        return hasCheckersOnBar || hasCheckersInWinnerHomeBoard;
+    }
+
+    private boolean hasCheckersInHomeBoard(Player player, Player winner) {
+        int homeStart, homeEnd;
+
+        if (winner.equals(matchManager.getPlayer1())) {
+            homeStart = 19;
+            homeEnd = 24;
+        } else {
+            homeStart = 1;
+            homeEnd = 6;
+        }
+
+        for (int position = homeStart; position <= homeEnd; position++) {
+            List<Checker> checkers = boardService.getBoard().getPositions().getOrDefault(position, new ArrayList<>());
+            for (Checker checker : checkers) {
+                if (checker.getOwner().equals(player)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public boolean isGameOver() {
@@ -65,6 +130,12 @@ public class GameService {
 
         System.out.println("\nCurrent Game State:");
         boardService.displayBoard();
+        System.out.println("Doubling Cube Value: " + doublingCube.getValue());
+        if (doublingCube.getOwner() == null) {
+            System.out.println("The cube is in the middle (no owner).");
+        } else {
+            System.out.println("Doubling cube owned by: " + doublingCube.getOwner().getName());
+        }
         System.out.println("It's " + currentPlayer.getName() + "'s turn.");
         System.out.println(currentPlayer.getName() + "'s pip count: " + calculatePipCount(currentPlayer));
     }
@@ -192,7 +263,7 @@ public class GameService {
         Player highestScorer = matchManager.getPlayer1Score() > matchManager.getPlayer2Score()
                 ? matchManager.getPlayer1()
                 : matchManager.getPlayer2();
-        matchManager.incrementScore(highestScorer);
+        matchManager.incrementScore(highestScorer, CommonConstants.SINGLE);
         System.out.println("Match ended early. " + highestScorer.getName() + " is awarded 1 point!");
     }
     private char getUserSelection() {
@@ -242,4 +313,84 @@ public class GameService {
         }
         return false;
     }
+
+    public void offerDouble() throws InvalidMoveException {
+        if (doublingCube.getOwner() == currentPlayer) {
+            throw new InvalidMoveException("You already own the cube and cannot offer a double.");
+        }
+        if (matchManager.isDoublingOffered()) {
+            throw new InvalidMoveException("A double has already been offered.");
+        }
+
+        matchManager.setDoublingOffered(true);
+        matchManager.setPlayerToRespond(getOpponentPlayer());
+        System.out.printf("%s offers to double the stakes to %d.%n", currentPlayer.getName(), doublingCube.getValue() * 2);
+
+        Player opponent = getOpponentPlayer();
+        CommandParser commandParser = new CommandParser();
+
+        while (true) {
+            currentPlayer = opponent;
+            System.out.printf("%s, do you accept the double? (ACCEPT/REFUSE): ", opponent.getName());
+            String input = commandParser.getUserInput();
+
+            try {
+                Command command = commandParser.parseCommand(input);
+
+                switch (command.getType()) {
+                    case ACCEPT:
+                        acceptDouble(); // Trigger accept logic
+                        return; // Exit the method after successful handling
+                    case REFUSE:
+                        refuseDouble(); // Trigger refuse logic
+                        return; // Exit the method after successful handling
+                    default:
+                        System.out.println("Invalid command. Please type 'ACCEPT' or 'REFUSE'.");
+                }
+            } catch (InvalidCommandException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
+
+    public void acceptDouble() throws InvalidMoveException {
+        if (!matchManager.isDoublingOffered()) {
+            throw new InvalidMoveException("No double has been offered.");
+        }
+        if (!currentPlayer.equals(matchManager.getPlayerToRespond())) {
+            throw new InvalidMoveException("It's not your turn to respond to the double.");
+        }
+
+        doublingCube.doubleValue(currentPlayer);
+        matchManager.setDoublingOffered(false);
+        matchManager.setPlayerToRespond(null);
+        System.out.println(currentPlayer.getName() + " accepts the double. The stakes are now " + doublingCube.getValue() + ".");
+    }
+
+    public void refuseDouble() throws InvalidMoveException {
+        if (!matchManager.isDoublingOffered()) {
+            throw new InvalidMoveException("No double has been offered.");
+        }
+        if (!currentPlayer.equals(matchManager.getPlayerToRespond())) {
+            throw new InvalidMoveException("It's not your turn to respond to the double.");
+        }
+
+        Player winner = getOpponentPlayer();
+        int points = doublingCube.getValue();
+        matchManager.incrementScore(winner, points);
+
+        System.out.println(currentPlayer.getName() + " refuses the double. " + winner.getName() + " wins " + points + " point(s).");
+
+        // Reset for next game
+        doublingCube.reset();
+        matchManager.setDoublingOffered(false);
+        matchManager.setPlayerToRespond(null);
+        matchManager.setGameOver(true);
+    }
+
+    private Player getOpponentPlayer() {
+        return currentPlayer.equals(matchManager.getPlayer1()) ? matchManager.getPlayer2() : matchManager.getPlayer1();
+    }
+
 }

@@ -47,7 +47,7 @@ public class GameController {
             Player highestScorer = matchManager.getPlayer1Score() > matchManager.getPlayer2Score()
                     ? matchManager.getPlayer1()
                     : matchManager.getPlayer2();
-            matchManager.incrementScore(highestScorer);
+            matchManager.incrementScore(highestScorer, SINGLE);
             System.out.println("Current match ended. " + highestScorer.getName() + " is awarded 1 point!");
         }
 
@@ -74,42 +74,58 @@ public class GameController {
 
         while (true) {
             try {
+                if (matchManager.isGameOver()) {
+                    matchManager.setGameOver(false);
+                    break;
+                }
+
                 gameService.displayGameState();
 
                 String input = commandParser.getUserInput();
                 Command command = commandParser.parseCommand(input);
 
-                if (command.getType() == CommandType.QUIT) {
-                    System.out.println(QUIT_MESSAGE);
-                    return;
-                } else if (command.getType() == CommandType.HINT) {
-                    displayHint();
-                } else if (command.getType() == CommandType.END_MATCH) {
-                    System.out.println("Ending the current match...");
-                    handleEndMatch();
-                    return;
-                } else {
-                    gameService.executeCommand(command.getType());
+                switch (command.getType()) {
+                    case QUIT:
+                        System.out.println(QUIT_MESSAGE);
+                        return;
+                    case HINT:
+                        displayHint();
+                        break;
+                    case END_MATCH:
+                        System.out.println("Ending the current match...");
+                        handleEndMatch();
+                        return;
+                    case DOUBLE:
+                        gameService.offerDouble();
+                        break;
+                    case ACCEPT:
+                        gameService.acceptDouble();
+                        break;
+                    case REFUSE:
+                        gameService.refuseDouble();
+                        break;
+                    default:
+                        gameService.executeCommand(command.getType());
                 }
 
                 if (gameService.isGameOver()) {
                     gameService.displayGameState();
+                    gameService.updateScore(); // Now includes doubling cube value
                     System.out.println(GAME_WON_MESSAGE);
                     break;
                 }
-            } catch (InvalidCommandException e) {
+            } catch (InvalidCommandException | InvalidMoveException e) {
                 System.out.println(e.getMessage());
-            } catch (InvalidMoveException e) {
-                System.out.println("Invalid move: " + e.getMessage());
             }
         }
     }
+
 
     private void handleEndMatch() {
         Player highestScorer = matchManager.getPlayer1Score() > matchManager.getPlayer2Score()
                 ? matchManager.getPlayer1()
                 : matchManager.getPlayer2();
-        matchManager.incrementScore(highestScorer);
+        matchManager.incrementScore(highestScorer, SINGLE);
         System.out.println("Match ended early. " + highestScorer.getName() + " is awarded 1 point!");
     }
 
