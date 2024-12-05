@@ -39,7 +39,7 @@ public class GameController {
             String response = commandParser.getUserInput().toLowerCase();
 
             if (response.equalsIgnoreCase("yes")) {
-                setupNewMatch();
+                playMatch();
             } else {
                 matchManager.setGameOver(true);
                 System.out.println("Thank you for playing Backgammon!");
@@ -102,7 +102,7 @@ public class GameController {
     private void playSingleGame() {
         gameService.setUpGame();
 
-        while (!matchManager.isMatchOver()) {
+        while (!matchManager.isGameOver()) {
             try {
                 if (matchManager.isGameOver()) {
                     return;
@@ -137,7 +137,7 @@ public class GameController {
             }
             case HINT -> displayHint();
             case END_MATCH -> handleEndMatch();
-            case DOUBLE ->gameService.offerDouble();
+            case DOUBLE -> gameService.offerDouble();
             case ACCEPT, REFUSE -> System.out.println("Invalid action: Use the DOUBLE command to initiate this process.");
             default -> gameService.executeCommand(command.getType());
         }
@@ -146,12 +146,7 @@ public class GameController {
 
     private void handleEndMatch() {
         System.out.println("Ending the current match...");
-        matchManager.setMatchOver(true); // Forcefully end the match
-        Player highestScorer = matchManager.getPlayer1Score() > matchManager.getPlayer2Score()
-                ? matchManager.getPlayer1()
-                : matchManager.getPlayer2();
-        matchManager.incrementScore(highestScorer, SINGLE);
-        System.out.println("Match ended early. " + highestScorer.getName() + " is awarded 1 point!");
+        matchManager.completeMatch();
     }
 
     private void displayHint() {
