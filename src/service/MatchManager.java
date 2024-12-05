@@ -7,14 +7,15 @@ public class MatchManager {
     private final Player player2;
     private int player1Score = 0;
     private int player2Score = 0;
-    private int matchLength;
+    private final int matchLength;
     private boolean doublingOffered = false;
     private Player playerToRespond;
     private boolean gameOver = false;
 
     public MatchManager(String name1, String name2, int matchLength) {
-        this.player1 = new Player(name1);
-        this.player2 = new Player(name2);
+        Player.initializePlayers(name1, name2);
+        this.player1 = Player.PLAYER1;
+        this.player2 = Player.PLAYER2;
         this.matchLength = matchLength;
     }
 

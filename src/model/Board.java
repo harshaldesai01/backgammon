@@ -223,7 +223,7 @@ public class Board {
         return positions;
     }
 
-    public List<Checker> getBarForPlayer(Player player) {
+    public List<Checker> getCheckersOnBar(Player player) {
         return player == player1 ? barPlayer1 : barPlayer2;
     }
 

@@ -99,10 +99,18 @@ public class GameController {
                         gameService.offerDouble();
                         break;
                     case ACCEPT:
-                        gameService.acceptDouble();
+                        if (!matchManager.isDoublingOffered()) {
+                            System.out.println("Invalid action: No double has been offered to accept.");
+                        } else {
+                            System.out.println("Invalid action: Use the DOUBLE command to initiate this process.");
+                        }
                         break;
                     case REFUSE:
-                        gameService.refuseDouble();
+                        if (!matchManager.isDoublingOffered()) {
+                            System.out.println("Invalid action: No double has been offered to refuse.");
+                        } else {
+                            System.out.println("Invalid action: Use the DOUBLE command to initiate this process.");
+                        }
                         break;
                     default:
                         gameService.executeCommand(command.getType());
