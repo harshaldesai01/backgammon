@@ -7,11 +7,11 @@ import model.Checker;
 import model.Dice;
 import model.DoublingCube;
 import model.Player;
-import util.Command;
-import util.CommandParser;
-import util.CommonConstants;
-import util.DiceCommand;
+import util.*;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -46,11 +46,13 @@ public class GameService {
 
 
     public void executeCommand(Command command) {
-        if (command instanceof DiceCommand diceCommand) {
+        if (command instanceof TestCommand testCommand) {
+            processFileInput(testCommand.getFilename());
+        }
+        else if (command instanceof DiceCommand diceCommand) {
             setPresetDiceRolls(diceCommand.getRoll1(), diceCommand.getRoll2());
             System.out.printf("Dice rolls set to: %d and %d.%n", diceCommand.getRoll1(), diceCommand.getRoll2());
         } else {
-            // Handle other command types
             switch (command.getType()) {
                 case ROLL -> {
                     executeRollAndPlay(currentPlayer);
@@ -61,6 +63,23 @@ public class GameService {
                 case END_MATCH -> handleEndMatch();
                 default -> System.out.println("Unknown command. Please try again.");
             }
+        }
+    }
+
+    private void processFileInput(String filename) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty()) continue; // Skip empty lines
+                try {
+                    Command command = commandParser.parseCommand(line.trim());
+                    executeCommand(command);
+                } catch (InvalidCommandException e) {
+                    System.out.printf("Invalid command in file '%s': %s%n", filename, e.getMessage());
+                }
+            }
+        } catch (IOException e) {
+            System.out.printf("Error reading file '%s': %s%n", filename, e.getMessage());
         }
     }
 

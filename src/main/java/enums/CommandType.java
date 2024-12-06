@@ -9,5 +9,6 @@ public enum CommandType {
     DOUBLE,
     ACCEPT,
     REFUSE,
-    DICE
+    DICE,
+    TEST
 }

@@ -14,9 +14,16 @@ public class CommandParser {
 
 
     public Command parseCommand(String input) throws InvalidCommandException {
-        String[] parts = input.split("\\s+");
+        String[] parts = input.split("\\s+"); // Split into all components
         try {
             CommandType type = CommandType.valueOf(parts[0].toUpperCase());
+
+            if (type == CommandType.TEST) {
+                if (parts.length != 2) {
+                    throw new InvalidCommandException("Invalid TEST command format. Use: test <filename>");
+                }
+                return new TestCommand(type, parts[1].trim());
+            }
 
             if (type == CommandType.DICE) {
                 if (parts.length != 3) {
