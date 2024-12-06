@@ -8,5 +8,6 @@ public enum CommandType {
     END_MATCH,
     DOUBLE,
     ACCEPT,
-    REFUSE
+    REFUSE,
+    DICE
 }

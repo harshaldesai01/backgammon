@@ -105,7 +105,7 @@ public class GameController {
                         gameService.refuseDouble();
                         break;
                     default:
-                        gameService.executeCommand(command.getType());
+                        gameService.executeCommand(command);
                 }
 
                 if (gameService.isGameOver()) {
