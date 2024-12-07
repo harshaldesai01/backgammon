@@ -7,10 +7,23 @@ public class MatchManager {
     private final Player player2;
     private int player1Score = 0;
     private int player2Score = 0;
-    private int matchLength;
-    private boolean doublingOffered = false;
-    private Player playerToRespond;
+
+    public boolean isGameOver() {
+        return gameOver;
+    }
+
+    public void setGameOver(boolean gameOver) {
+        this.gameOver = gameOver;
+    }
+
     private boolean gameOver = false;
+
+    public int getMatchLength() {
+        return matchLength;
+    }
+
+    private final int matchLength;
+    private int gamesPlayed = 0;
 
     public MatchManager(String name1, String name2, int matchLength) {
         this.player1 = new Player(name1);
@@ -35,11 +48,27 @@ public class MatchManager {
     }
 
     public boolean isMatchOver() {
-        return player1Score == matchLength || player2Score == matchLength;
+        return gamesPlayed >= matchLength;
+    }
+
+    public void incrementGamesPlayed() {
+        gamesPlayed++;
+    }
+
+    public void resetMatch() {
+        player1Score = 0;
+        player2Score = 0;
+        gamesPlayed = 0;
     }
 
     public String getWinnerName() {
-        return player1Score > player2Score ? player1.getName() : player2.getName();
+        if (player1Score > player2Score) {
+            return player1.getName();
+        } else if (player2Score > player1Score) {
+            return player2.getName();
+        } else {
+            return "Draw";
+        }
     }
 
     public int getPlayer1Score() {
@@ -49,33 +78,4 @@ public class MatchManager {
     public int getPlayer2Score() {
         return player2Score;
     }
-
-    public int getMatchLength() {
-        return matchLength;
-    }
-
-    public boolean isDoublingOffered() {
-        return doublingOffered;
-    }
-
-    public void setDoublingOffered(boolean doublingOffered) {
-        this.doublingOffered = doublingOffered;
-    }
-
-    public Player getPlayerToRespond() {
-        return playerToRespond;
-    }
-
-    public void setPlayerToRespond(Player playerToRespond) {
-        this.playerToRespond = playerToRespond;
-    }
-
-    public boolean isGameOver() {
-        return gameOver;
-    }
-
-    public void setGameOver(boolean gameOver) {
-        this.gameOver = gameOver;
-    }
-
 }

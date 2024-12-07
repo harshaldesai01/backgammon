@@ -12,9 +12,8 @@ public class CommandParser {
         return scanner.nextLine().trim();
     }
 
-
     public Command parseCommand(String input) throws InvalidCommandException {
-        String[] parts = input.split("\\s+"); // Split into all components
+        String[] parts = input.split("\\s+");
         try {
             CommandType type = CommandType.valueOf(parts[0].toUpperCase());
 
@@ -25,26 +24,11 @@ public class CommandParser {
                 return new TestCommand(type, parts[1].trim());
             }
 
-            if (type == CommandType.DICE) {
-                if (parts.length != 3) {
-                    throw new InvalidCommandException("Invalid DICE command format. Use: dice <int> <int>");
-                }
-                try {
-                    int roll1 = Integer.parseInt(parts[1]);
-                    int roll2 = Integer.parseInt(parts[2]);
-                    return new DiceCommand(type, roll1, roll2);
-                } catch (NumberFormatException e) {
-                    throw new InvalidCommandException("Dice values must be integers.");
-                }
-            }
-
             return new Command(type);
         } catch (IllegalArgumentException e) {
             throw new InvalidCommandException("Invalid command: '" + input + "'. Type 'HINT' for valid commands.");
         }
     }
-
-
 
     public void close() {
         scanner.close();
