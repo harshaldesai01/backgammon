@@ -89,6 +89,7 @@ public class GameController {
                     case END_GAME -> {
                         // End current game and return control to playMatch
                         handleEndGame();
+                        return;
                     }
                     case END_MATCH -> {
                         // End the entire match
@@ -96,14 +97,8 @@ public class GameController {
                         return;
                     }
                     case DOUBLE -> gameService.offerDouble();
-                    case ACCEPT, REFUSE -> {
-                        // Should only be used if there's a double offer
-                        throw new InvalidCommandException("This command can only be used in case of a double offer!");
-                    }
-                    default -> {
-                        // Execute other valid moves/commands
-                        gameService.executeCommand(command);
-                    }
+                    case ACCEPT, REFUSE -> throw new InvalidCommandException("This command can only be used in case of a double offer!");
+                    default -> gameService.executeCommand(command);
                 }
             } catch (InvalidCommandException e) {
                 System.out.println(e.getMessage());
@@ -113,32 +108,30 @@ public class GameController {
 
     private void handleEndGame() {
         System.out.println("Ending current game!");
-        gameService.updateScore();
-        announceGameWinner();
+        updateScoreAndAnnounceWinner(false);
         gameService.setGameOver(true);
-    }
-
-    private void announceGameWinner() {
-        String winner = matchManager.getWinnerName();
-        System.out.println("Game Over! " + (winner.equals("Draw") ? "It's a draw!" : winner + " wins the current game!"));
     }
 
     private void handleEndMatch() {
         System.out.println("Ending the current match...");
-        gameService.updateScore();
-        announceMatchWinner();
+        updateScoreAndAnnounceWinner(true);
         matchManager.setMatchOver(true);
     }
 
     private void handleQuit() {
-        announceMatchWinner();
+        updateScoreAndAnnounceWinner(true);
         System.out.println(QUIT_MESSAGE);
         commandParser.close();
     }
 
-    private void announceMatchWinner() {
+    private void updateScoreAndAnnounceWinner(boolean matchEnd) {
+        gameService.updateScore();
+        announceWinner(matchEnd);
+    }
+
+    private void announceWinner(boolean matchEnd) {
         String winner = matchManager.getWinnerName();
-        System.out.println("Match Over! " + (winner.equals("Draw") ? "It's a draw!" : winner + " wins the match!"));
+        System.out.println(matchEnd? "Match Over!": "Game Over! " + (winner.equals("Draw") ? "It's a draw!" : winner + " wins the current game!"));
     }
 
     private void displayHint() {
