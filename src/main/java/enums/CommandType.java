@@ -10,5 +10,6 @@ public enum CommandType {
     ACCEPT,
     REFUSE,
     DICE,
-    TEST
+    TEST,
+    END_GAME
 }

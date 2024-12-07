@@ -21,6 +21,7 @@ public class GameService {
     private Player currentPlayer;
     private final Dice dice = new Dice();
     private final CommandParser commandParser = new CommandParser();
+    private boolean gameOver;
 
     private boolean isDiceSet = false;
     private int presetRoll1;
@@ -42,6 +43,7 @@ public class GameService {
     }
 
     public void setUpGame() {
+        gameOver = false;
         boardService = new BoardService(matchManager.getPlayer1(), matchManager.getPlayer2());
         determineStartingPlayer();
     }
@@ -170,9 +172,17 @@ public class GameService {
     }
 
     public boolean isGameOver() {
+        return gameOver || isGameOverCondition();
+    }
+
+    private boolean isGameOverCondition() {
         if (hasPlayerWon(matchManager.getPlayer1())) {
             return true;
         } else return hasPlayerWon(matchManager.getPlayer2());
+    }
+
+    public void setGameOver(boolean gameOver) {
+        this.gameOver = gameOver;
     }
 
     public void displayGameState() {
@@ -414,14 +424,15 @@ public class GameService {
     }
 
     public void offerDouble() throws InvalidCommandException {
-        if (doublingManager.getDoublingCube().getOwner() != currentPlayer) {
+        if (null != doublingManager.getDoublingCube().getOwner() && doublingManager.getDoublingCube().getOwner() != currentPlayer) {
             throw new InvalidCommandException("You cannot offer the doubling cube!");
         }
 
-        Player opponent = getOpponentPlayer();
-
-        doublingManager.setPlayerToRespond(opponent);
         System.out.printf("%s offers to double the stakes to %d.%n", currentPlayer.getName(), doublingManager.getDoublingCube().getValue() * 2);
+
+        Player opponent = getOpponentPlayer();
+        doublingManager.setPlayerToRespond(opponent);
+        toggleCurrentPlayer();
 
         handlingDoublingResponse(opponent);
     }
@@ -470,7 +481,7 @@ public class GameService {
         // Reset for next game
         doublingManager.getDoublingCube().reset();
         doublingManager.setPlayerToRespond(null);
-        matchManager.setGameOver(true);
+        setGameOver(true);
     }
 
     private Player getOpponentPlayer() {

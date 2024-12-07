@@ -22,16 +22,13 @@ public class GameController {
     public void startGame() {
         System.out.println(WELCOME_MESSAGE);
 
-        setupNewMatch();
-
         while (true) {
+            setupNewMatch();
             playMatch();
 
             System.out.print("Would you like to start a new match? (yes/no): ");
-            String response = commandParser.getUserInput().toLowerCase();
-            if (response.equals("yes")) {
-                setupNewMatch();
-            } else {
+            String response = commandParser.getUserInput();
+            if (!response.equalsIgnoreCase("yes")) {
                 System.out.println("Thank you for playing Backgammon!");
                 commandParser.close();
                 break;
@@ -51,43 +48,63 @@ public class GameController {
     private void playMatch() {
         while (!matchManager.isMatchOver()) {
             playSingleGame();
-            matchManager.incrementGamesPlayed();
-            gameService.updateScore();
+
+            if(!matchManager.isMatchOver()) {
+                matchManager.incrementGamesPlayed();
+                gameService.updateScore();
+            }
         }
     }
 
     private void playSingleGame() {
+        // Set up a new game before handling commands
         gameService.setUpGame();
 
-        while (true) {
+        while (!gameService.isGameOver()) {
+            // Display current game state and await user command
+            gameService.displayGameState();
+
+            String input = commandParser.getUserInput();
+            Command command;
             try {
-                if (gameService.isGameOver() || matchManager.isGameOver()) {
-                    break;
-                }
+                command = commandParser.parseCommand(input);
+            } catch (InvalidCommandException e) {
+                System.out.println(e.getMessage());
+                continue;
+            }
 
-                gameService.displayGameState();
-
-                String input = commandParser.getUserInput();
-                Command command = commandParser.parseCommand(input);
-
+            try {
                 if (command instanceof TestCommand testCommand) {
+                    // Execute test command directly on gameService
                     gameService.executeCommand(testCommand);
                     continue;
                 }
 
                 switch (command.getType()) {
                     case QUIT -> {
+                        // Immediately end everything
                         handleQuit();
                         System.exit(0);
                     }
                     case HINT -> displayHint();
+                    case END_GAME -> {
+                        // End current game and return control to playMatch
+                        handleEndGame();
+                    }
                     case END_MATCH -> {
+                        // End the entire match
                         handleEndMatch();
                         return;
                     }
                     case DOUBLE -> gameService.offerDouble();
-                    case ACCEPT, REFUSE -> throw new InvalidCommandException("This command can only be used in case of a double offer!");
-                    default -> gameService.executeCommand(command);
+                    case ACCEPT, REFUSE -> {
+                        // Should only be used if there's a double offer
+                        throw new InvalidCommandException("This command can only be used in case of a double offer!");
+                    }
+                    default -> {
+                        // Execute other valid moves/commands
+                        gameService.executeCommand(command);
+                    }
                 }
             } catch (InvalidCommandException e) {
                 System.out.println(e.getMessage());
@@ -95,17 +112,21 @@ public class GameController {
         }
     }
 
-    private void handleQuit() {
-        announceMatchWinner();
-        System.out.println(QUIT_MESSAGE);
-        commandParser.close();
+    private void handleEndGame() {
+        System.out.println("Ending current game!");
+        gameService.setGameOver(true);
     }
 
     private void handleEndMatch() {
         System.out.println("Ending the current match...");
         announceMatchWinner();
-        matchManager.resetMatch();
         matchManager.setMatchOver(true);
+    }
+
+    private void handleQuit() {
+        announceMatchWinner();
+        System.out.println(QUIT_MESSAGE);
+        commandParser.close();
     }
 
     private void announceMatchWinner() {

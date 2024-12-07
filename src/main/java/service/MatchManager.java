@@ -8,21 +8,6 @@ public class MatchManager {
     private int player1Score = 0;
     private int player2Score = 0;
     private boolean matchOver = false;
-
-    public boolean isGameOver() {
-        return gameOver;
-    }
-
-    public void setGameOver(boolean gameOver) {
-        this.gameOver = gameOver;
-    }
-
-    private boolean gameOver = false;
-
-    public int getMatchLength() {
-        return matchLength;
-    }
-
     private final int matchLength;
     private int gamesPlayed = 0;
 
@@ -56,13 +41,6 @@ public class MatchManager {
         gamesPlayed++;
     }
 
-    public void resetMatch() {
-        player1Score = 0;
-        player2Score = 0;
-        gamesPlayed = 0;
-        matchOver = false;
-    }
-
     public String getWinnerName() {
         if (player1Score > player2Score) {
             return player1.getName();
@@ -83,5 +61,9 @@ public class MatchManager {
 
     public void setMatchOver(boolean matchOver) {
         this.matchOver = matchOver;
+    }
+
+    public int getMatchLength() {
+        return matchLength;
     }
 }
