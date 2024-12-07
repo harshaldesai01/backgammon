@@ -103,6 +103,9 @@ public class GameController {
             } catch (InvalidCommandException e) {
                 System.out.println(e.getMessage());
             }
+            if(gameService.isGameOver()) {
+                handleEndGame();
+            }
         }
     }
 

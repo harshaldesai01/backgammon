@@ -211,9 +211,7 @@ public class GameService {
     }
 
     private boolean isGameOverCondition() {
-        if (isAllCheckersBorneOff(matchManager.getPlayer1())) {
-            return true;
-        } else return isAllCheckersBorneOff(matchManager.getPlayer2());
+        return isAllCheckersBorneOff(matchManager.getPlayer1()) || isAllCheckersBorneOff(matchManager.getPlayer2());
     }
 
     public void setGameOver(boolean gameOver) {
