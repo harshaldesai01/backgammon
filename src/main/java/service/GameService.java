@@ -28,6 +28,10 @@ public class GameService {
     private int presetRoll1;
     private int presetRoll2;
 
+    private boolean isFileInputMode = false;
+    private BufferedReader fileBufferedReader;
+
+
     public void setPresetDiceRolls(int roll1, int roll2) {
         isDiceSet = true;
         presetRoll1 = roll1;
@@ -68,6 +72,8 @@ public class GameService {
 
     private void processFileInput(String filename) {
         try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            fileBufferedReader = reader;
+            isFileInputMode = true;
             String line;
             while ((line = reader.readLine()) != null) {
                 if (line.trim().isEmpty()) continue; // Skip empty lines
@@ -80,6 +86,9 @@ public class GameService {
             }
         } catch (IOException e) {
             System.out.printf("Error reading file '%s': %s%n", filename, e.getMessage());
+        } finally {
+            isFileInputMode = false; // Ensure manual input resumes after file processing
+            fileBufferedReader = null;
         }
     }
 
@@ -271,7 +280,24 @@ public class GameService {
                 optionLetter++;
             }
 
-            char selectedOption = getUserSelection(options.size());
+            char selectedOption;
+            if (isFileInputMode) {
+                try {
+                    String fileInput = fileBufferedReader.readLine();
+                    if (fileInput != null && !fileInput.trim().isEmpty()) {
+                        selectedOption = fileInput.trim().toUpperCase().charAt(0);
+                    } else {
+                        throw new IOException("End of file or invalid input in test command.");
+                    }
+                } catch (IOException e) {
+                    System.out.println("Error reading from test file. Switching back to manual input.");
+                    isFileInputMode = false;
+                    selectedOption = getUserSelection(options.size());
+                }
+            } else {
+                selectedOption = getUserSelection(options.size());
+            }
+
             boolean successfulMove = executeSelectedOption(selectedOption, options, rolls);
 
             if (!successfulMove) {
