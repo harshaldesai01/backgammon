@@ -7,10 +7,11 @@ import model.Checker;
 import model.Dice;
 import model.DoublingCube;
 import model.Player;
-import util.Command;
-import util.CommandParser;
-import util.CommonConstants;
+import util.*;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -23,6 +24,20 @@ public class GameService {
     private final DoublingCube doublingCube;
     private final CommandParser commandParser = new CommandParser();
 
+    private boolean isDiceSet = false;
+    private int presetRoll1;
+    private int presetRoll2;
+
+    private boolean isFileInputMode = false;
+    private BufferedReader fileBufferedReader;
+
+
+    public void setPresetDiceRolls(int roll1, int roll2) {
+        isDiceSet = true;
+        presetRoll1 = roll1;
+        presetRoll2 = roll2;
+    }
+
     public GameService(MatchManager matchManager) {
         this.matchManager = matchManager;
         this.doublingCube = new DoublingCube();
@@ -33,18 +48,51 @@ public class GameService {
         determineStartingPlayer();
     }
 
-    public void executeCommand(CommandType command) {
-        switch (command) {
-            case ROLL -> {
-                executeRollAndPlay(currentPlayer);
-                displayGameState();
-                toggleCurrentPlayer();
+
+    public void executeCommand(Command command) {
+        if (command instanceof TestCommand testCommand) {
+            processFileInput(testCommand.getFilename());
+        }
+        else if (command instanceof DiceCommand diceCommand) {
+            setPresetDiceRolls(diceCommand.getRoll1(), diceCommand.getRoll2());
+            System.out.printf("Dice rolls set to: %d and %d.%n", diceCommand.getRoll1(), diceCommand.getRoll2());
+        } else {
+            switch (command.getType()) {
+                case ROLL -> {
+                    executeRollAndPlay(currentPlayer);
+                    displayGameState();
+                    toggleCurrentPlayer();
+                }
+                case PIP -> displayPipCounts();
+                case END_MATCH -> handleEndMatch();
+                default -> System.out.println("Unknown command. Please try again.");
             }
-            case PIP -> displayPipCounts();
-            case END_MATCH -> handleEndMatch();
-            default -> System.out.println("Unknown command. Please try again.");
         }
     }
+
+    private void processFileInput(String filename) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            fileBufferedReader = reader;
+            isFileInputMode = true;
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty()) continue; // Skip empty lines
+                try {
+                    Command command = commandParser.parseCommand(line.trim());
+                    executeCommand(command);
+                } catch (InvalidCommandException e) {
+                    System.out.printf("Invalid command in file '%s': %s%n", filename, e.getMessage());
+                }
+            }
+        } catch (IOException e) {
+            System.out.printf("Error reading file '%s': %s%n", filename, e.getMessage());
+        } finally {
+            isFileInputMode = false; // Ensure manual input resumes after file processing
+            fileBufferedReader = null;
+        }
+    }
+
+
 
 
     public void updateScore() {
@@ -142,12 +190,21 @@ public class GameService {
     }
 
     private void executeRollAndPlay(Player player) {
-        int roll1 = dice.roll();
-        int roll2 = dice.roll();
-        System.out.println(player.getName() + " rolled " + roll1 + " and " + roll2);
+        int roll1, roll2;
 
+        if (isDiceSet) {
+            roll1 = presetRoll1;
+            roll2 = presetRoll2;
+            isDiceSet = false; // Reset the flag after use
+        } else {
+            roll1 = dice.roll();
+            roll2 = dice.roll();
+        }
+
+        System.out.println(player.getName() + " rolled " + roll1 + " and " + roll2);
         playRoll(player, roll1, roll2);
     }
+
 
     private void displayPipCounts() {
         System.out.println(matchManager.getPlayer1().getName() + "'s pip count: " + calculatePipCount(matchManager.getPlayer1()));
@@ -223,7 +280,24 @@ public class GameService {
                 optionLetter++;
             }
 
-            char selectedOption = getUserSelection(options.size());
+            char selectedOption;
+            if (isFileInputMode) {
+                try {
+                    String fileInput = fileBufferedReader.readLine();
+                    if (fileInput != null && !fileInput.trim().isEmpty()) {
+                        selectedOption = fileInput.trim().toUpperCase().charAt(0);
+                    } else {
+                        throw new IOException("End of file or invalid input in test command.");
+                    }
+                } catch (IOException e) {
+                    System.out.println("Error reading from test file. Switching back to manual input.");
+                    isFileInputMode = false;
+                    selectedOption = getUserSelection(options.size());
+                }
+            } else {
+                selectedOption = getUserSelection(options.size());
+            }
+
             boolean successfulMove = executeSelectedOption(selectedOption, options, rolls);
 
             if (!successfulMove) {

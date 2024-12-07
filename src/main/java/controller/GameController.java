@@ -8,6 +8,11 @@ import service.GameService;
 import service.MatchManager;
 import util.Command;
 import util.CommandParser;
+import util.TestCommand;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 
 import static util.CommonConstants.*;
 
@@ -69,6 +74,7 @@ public class GameController {
         }
     }
 
+
     private void playSingleGame() {
         gameService.setUpGame();
 
@@ -83,6 +89,11 @@ public class GameController {
 
                 String input = commandParser.getUserInput();
                 Command command = commandParser.parseCommand(input);
+
+                if (command instanceof TestCommand testCommand) {
+                    gameService.executeCommand(testCommand);
+                    continue; // After file processing, continue manual input
+                }
 
                 switch (command.getType()) {
                     case QUIT:
@@ -105,12 +116,12 @@ public class GameController {
                         gameService.refuseDouble();
                         break;
                     default:
-                        gameService.executeCommand(command.getType());
+                        gameService.executeCommand(command);
                 }
 
                 if (gameService.isGameOver()) {
                     gameService.displayGameState();
-                    gameService.updateScore(); // Now includes doubling cube value
+                    gameService.updateScore();
                     System.out.println(GAME_WON_MESSAGE);
                     break;
                 }
@@ -119,6 +130,7 @@ public class GameController {
             }
         }
     }
+
 
 
     private void handleEndMatch() {
