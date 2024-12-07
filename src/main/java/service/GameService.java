@@ -92,61 +92,96 @@ public class GameService {
     }
 
     public void updateScore() {
-        // Determine the winner or if the game is a draw
-        Player winner = null;
-        Player loser = null;
+        // Determine the winner based on either borne-off checkers or pip counts
+        Player winner = determineWinner();
+        Player loser = (winner == matchManager.getPlayer1()) ? matchManager.getPlayer2() : matchManager.getPlayer1();
 
-        if (hasPlayerWon(matchManager.getPlayer1())) {
-            winner = matchManager.getPlayer1();
-            loser = matchManager.getPlayer2();
-        } else if (hasPlayerWon(matchManager.getPlayer2())) {
-            winner = matchManager.getPlayer2();
-            loser = matchManager.getPlayer1();
-        }
-
-        // Handle scoring based on outcome
-        if (winner != null) {
-            int points = calculatePoints(winner, loser);
-            matchManager.incrementScore(winner, points);
-        } else {
-            System.out.println("The game ends in a draw. No points awarded.");
-        }
-
-        // Reset the doubling cube for the next game
-        doublingManager.getDoublingCube().reset();
-    }
-
-    private int calculatePoints(Player winner, Player loser) {
         int basePoints = doublingManager.getDoublingCube().getValue();
+        int score = calculateScore(winner, loser, basePoints);
 
-        if (loser != null && isBackgammon(loser)) {
-            System.out.printf("Backgammon! %s scores triple points!%n", winner.getName());
-            return basePoints * CommonConstants.BACKGAMMON;
-        } else if (loser != null && isGammon(loser)) {
-            System.out.printf("Gammon! %s scores double points!%n", winner.getName());
-            return basePoints * CommonConstants.GAMMON;
-        }
-        return basePoints;
+        // Update the scores in the match manager
+        matchManager.incrementScore(winner, score);
     }
 
+    private Player determineWinner() {
+        boolean player1AllOff = isAllCheckersBorneOff(matchManager.getPlayer1());
+        boolean player2AllOff = isAllCheckersBorneOff(matchManager.getPlayer2());
 
-    private boolean isGammon(Player player) {
-        // The opponent has not borne off any checkers
-        return boardService.getBoard().getBearOffForPlayer(player).isEmpty();
-    }
+        if (player1AllOff && !player2AllOff) {
+            return matchManager.getPlayer1();
+        } else if (player2AllOff && !player1AllOff) {
+            return matchManager.getPlayer2();
+        } else if (!player1AllOff && !player2AllOff) {
+            // If no one has borne off all checkers, determine by pip count
+            int p1PipCount = calculatePipCount(matchManager.getPlayer1());
+            int p2PipCount = calculatePipCount(matchManager.getPlayer2());
 
-    private boolean isBackgammon(Player player) {
-        // The opponent has not borne off any checkers
-        // AND has checkers on the bar or in the winner's home board
-        if (!isGammon(player)) {
-            return false;
+            if (p1PipCount < p2PipCount) {
+                return matchManager.getPlayer1();
+            } else if (p2PipCount < p1PipCount) {
+                return matchManager.getPlayer2();
+            } else {
+                // It's a tie (Draw scenario). Handle according to your game rules.
+                // For now, we'll treat a tie as a "no winner" scenario.
+                return null;
+            }
         }
 
+        // If both have borne off all checkers at the same time (very unlikely in standard rules),
+        // handle it as a draw or special case if needed.
+        return null;
+    }
+
+    private int calculateScore(Player winner, Player loser, int basePoints) {
+        // If there's no winner (e.g., a draw situation), return no score
+        if (winner == null) {
+            return 0;
+        }
+
+        // Check if the winner borne off all checkers (since winner determination is partly based on this)
+        boolean winnerAllOff = isAllCheckersBorneOff(winner);
+
+        if (winnerAllOff) {
+            // If winner got all checkers off, check conditions for Gammon/Backgammon
+            if (isGammon(winner, loser)) {
+                return basePoints * 2;
+            } else if (isBackgammon(winner, loser)) {
+                return basePoints * 3; // Typically backgammon is *3, but if you want *2, adjust here.
+            } else {
+                // Regular single game win by bearing off all checkers
+                return basePoints;
+            }
+        } else {
+            // If game ended early (no one borne off all checkers), winner is determined by pip count
+            return basePoints;
+        }
+    }
+
+    private boolean isAllCheckersBorneOff(Player player) {
+        // Check if the player has borne off all 15 checkers
+        int borneOffCount = boardService.getBoard().getBearOffForPlayer(player).size();
+        return borneOffCount == 15;
+    }
+
+    private boolean isGammon(Player winner, Player loser) {
+        // Gammon: If winner borne off all checkers and the loser has none borne off
+        int loserBorneOffCount = boardService.getBoard().getBearOffForPlayer(loser).size();
+        return loserBorneOffCount == 0 && !hasCheckersOnBarOrInWinnerHomeBoard(loser, winner);
+    }
+
+    private boolean isBackgammon(Player winner, Player loser) {
+        // Backgammon: If winner borne off all checkers and loser either:
+        // - Still has checkers in winner's home quadrant
+        // - Or has checkers on the bar
+        return hasCheckersOnBarOrInWinnerHomeBoard(loser, winner);
+    }
+
+    private boolean hasCheckersOnBarOrInWinnerHomeBoard(Player player, Player winner) {
         boolean hasCheckersOnBar = !boardService.getBoard().getBarForPlayer(player).isEmpty();
-        boolean hasCheckersInWinnerHomeBoard = hasCheckersInHomeBoard(player, currentPlayer);
-
+        boolean hasCheckersInWinnerHomeBoard = hasCheckersInHomeBoard(player, winner);
         return hasCheckersOnBar || hasCheckersInWinnerHomeBoard;
     }
+
 
     private boolean hasCheckersInHomeBoard(Player player, Player winner) {
         int homeStart, homeEnd;
@@ -176,9 +211,9 @@ public class GameService {
     }
 
     private boolean isGameOverCondition() {
-        if (hasPlayerWon(matchManager.getPlayer1())) {
+        if (isAllCheckersBorneOff(matchManager.getPlayer1())) {
             return true;
-        } else return hasPlayerWon(matchManager.getPlayer2());
+        } else return isAllCheckersBorneOff(matchManager.getPlayer2());
     }
 
     public void setGameOver(boolean gameOver) {
@@ -246,13 +281,6 @@ public class GameService {
 
     private void toggleCurrentPlayer() {
         currentPlayer = currentPlayer.equals(matchManager.getPlayer1()) ? matchManager.getPlayer2() : matchManager.getPlayer1();
-    }
-
-    private boolean hasPlayerWon(Player player) {
-        return boardService.getBearOffForPlayer(player).size() + boardService.getPositions().values().stream()
-                .flatMap(List::stream)
-                .filter(checker -> checker.getOwner().equals(player))
-                .count() == 0;
     }
 
     private int calculatePipCount(Player player) {
@@ -476,7 +504,7 @@ public class GameService {
         int points = doublingManager.getDoublingCube().getValue();
         matchManager.incrementScore(winner, points);
 
-        System.out.println(currentPlayer.getName() + " refuses the double. " + winner.getName() + " wins " + points + " point(s).");
+        System.out.println(currentPlayer.getName() + " refuses the double. ");
 
         // Reset for next game
         doublingManager.getDoublingCube().reset();

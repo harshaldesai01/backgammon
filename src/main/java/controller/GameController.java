@@ -51,7 +51,6 @@ public class GameController {
 
             if(!matchManager.isMatchOver()) {
                 matchManager.incrementGamesPlayed();
-                gameService.updateScore();
             }
         }
     }
@@ -114,11 +113,19 @@ public class GameController {
 
     private void handleEndGame() {
         System.out.println("Ending current game!");
+        gameService.updateScore();
+        announceGameWinner();
         gameService.setGameOver(true);
+    }
+
+    private void announceGameWinner() {
+        String winner = matchManager.getWinnerName();
+        System.out.println("Game Over! " + (winner.equals("Draw") ? "It's a draw!" : winner + " wins the current game!"));
     }
 
     private void handleEndMatch() {
         System.out.println("Ending the current match...");
+        gameService.updateScore();
         announceMatchWinner();
         matchManager.setMatchOver(true);
     }

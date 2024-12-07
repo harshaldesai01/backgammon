@@ -26,6 +26,9 @@ public class MatchManager {
     }
 
     public void incrementScore(Player player, int points) {
+        if(null == player) {
+            return;
+        }
         if (player.equals(player1)) {
             player1Score += points;
         } else if (player.equals(player2)) {
