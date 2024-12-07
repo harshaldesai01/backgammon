@@ -107,6 +107,7 @@ public class GameController {
         System.out.println("Ending the current match...");
         announceMatchWinner();
         matchManager.resetMatch();
+        matchManager.setMatchOver(true);
     }
 
     private void announceMatchWinner() {
