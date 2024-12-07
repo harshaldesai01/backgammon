@@ -431,7 +431,9 @@ public class GameService {
                 boardService.getBoard().bearOffChecker(currentPlayer, fromPosition);
 
                 // Calculate rollUsed for bear-off moves
-                rollUsed = Math.abs((currentPlayer == matchManager.getPlayer1() ? 0 : 25) - fromPosition);
+                rollUsed = rolls.stream()
+                        .filter(roll -> roll >= Math.abs((currentPlayer == matchManager.getPlayer1()? 25: 0) - fromPosition)).findFirst()
+                        .orElseThrow(() -> new IllegalStateException("No valid rolls available for bearing off"));
             } else {
                 // Regular move handling
                 String[] moveParts = chosenMove.split(" -> ");
