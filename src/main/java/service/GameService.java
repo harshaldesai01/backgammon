@@ -159,13 +159,13 @@ public class GameService {
 
     private boolean isAllCheckersBorneOff(Player player) {
         // Check if the player has borne off all 15 checkers
-        int borneOffCount = boardService.getBoard().getBearOffForPlayer(player).size();
+        int borneOffCount = boardService.getBearOffForPlayer(player).size();
         return borneOffCount == 15;
     }
 
     private boolean isGammon(Player winner, Player loser) {
         // Gammon: If winner borne off all checkers and the loser has none borne off
-        int loserBorneOffCount = boardService.getBoard().getBearOffForPlayer(loser).size();
+        int loserBorneOffCount = boardService.getBearOffForPlayer(loser).size();
         return loserBorneOffCount == 0 && !hasCheckersOnBarOrInWinnerHomeBoard(loser, winner);
     }
 
