@@ -144,8 +144,10 @@ public class GameService {
         if (winnerAllOff) {
             // If winner got all checkers off, check conditions for Gammon/Backgammon
             if (isGammon(winner, loser)) {
+                System.out.println("It's a gammon! Points will be doubled.");
                 return basePoints * 2;
             } else if (isBackgammon(winner, loser)) {
+                System.out.println("It's a Backgammon! Points will be trippled.");
                 return basePoints * 3; // Typically backgammon is *3, but if you want *2, adjust here.
             } else {
                 // Regular single game win by bearing off all checkers
