@@ -80,7 +80,7 @@ public class GameController {
                 switch (command.getType()) {
                     case QUIT -> {
                         handleQuit();
-                        return;
+                        System.exit(0);
                     }
                     case HINT -> displayHint();
                     case END_MATCH -> {
@@ -99,7 +99,7 @@ public class GameController {
 
     private void handleQuit() {
         announceMatchWinner();
-        System.out.println("Quitting the game...");
+        System.out.println(QUIT_MESSAGE);
         commandParser.close();
     }
 

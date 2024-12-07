@@ -90,22 +90,37 @@ public class GameService {
     }
 
     public void updateScore() {
-        Player winner = currentPlayer;
-        Player loser = getOpponentPlayer();
+        // Determine the winner or if the game is a draw
+        Player winner = null;
+        Player loser = null;
 
-        int points = calculatePoints(winner, loser);
+        if (hasPlayerWon(matchManager.getPlayer1())) {
+            winner = matchManager.getPlayer1();
+            loser = matchManager.getPlayer2();
+        } else if (hasPlayerWon(matchManager.getPlayer2())) {
+            winner = matchManager.getPlayer2();
+            loser = matchManager.getPlayer1();
+        }
 
-        System.out.printf("%s wins the game and scores %d point(s)!%n", winner.getName(), points);
-        matchManager.incrementScore(winner, points);
+        // Handle scoring based on outcome
+        if (winner != null) {
+            int points = calculatePoints(winner, loser);
+            matchManager.incrementScore(winner, points);
+        } else {
+            System.out.println("The game ends in a draw. No points awarded.");
+        }
+
+        // Reset the doubling cube for the next game
         doublingManager.getDoublingCube().reset();
     }
 
     private int calculatePoints(Player winner, Player loser) {
         int basePoints = doublingManager.getDoublingCube().getValue();
-        if (isBackgammon(loser)) {
+
+        if (loser != null && isBackgammon(loser)) {
             System.out.printf("Backgammon! %s scores triple points!%n", winner.getName());
             return basePoints * CommonConstants.BACKGAMMON;
-        } else if (isGammon(loser)) {
+        } else if (loser != null && isGammon(loser)) {
             System.out.printf("Gammon! %s scores double points!%n", winner.getName());
             return basePoints * CommonConstants.GAMMON;
         }
