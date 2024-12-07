@@ -2,17 +2,11 @@ package controller;
 
 import enums.CommandType;
 import exceptions.InvalidCommandException;
-import exceptions.InvalidMoveException;
-import model.Player;
 import service.GameService;
 import service.MatchManager;
 import util.Command;
 import util.CommandParser;
 import util.TestCommand;
-
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
 
 import static util.CommonConstants.*;
 
@@ -28,18 +22,13 @@ public class GameController {
     public void startGame() {
         System.out.println(WELCOME_MESSAGE);
 
-        setupNewMatch();
-
         while (true) {
+            setupNewMatch();
             playMatch();
 
-            System.out.println("Match Over! " + matchManager.getWinnerName() + " wins the match!");
-
             System.out.print("Would you like to start a new match? (yes/no): ");
-            String response = commandParser.getUserInput().toLowerCase();
-            if (response.equals("yes")) {
-                setupNewMatch();
-            } else {
+            String response = commandParser.getUserInput();
+            if (!response.equalsIgnoreCase("yes")) {
                 System.out.println("Thank you for playing Backgammon!");
                 commandParser.close();
                 break;
@@ -48,20 +37,9 @@ public class GameController {
     }
 
     private void setupNewMatch() {
-        if (matchManager != null) {
-            Player highestScorer = matchManager.getPlayer1Score() > matchManager.getPlayer2Score()
-                    ? matchManager.getPlayer1()
-                    : matchManager.getPlayer2();
-            matchManager.incrementScore(highestScorer, SINGLE);
-            System.out.println("Current match ended. " + highestScorer.getName() + " is awarded 1 point!");
-        }
-
-        System.out.print("Enter Player 1 name: ");
-        String name1 = commandParser.getUserInput();
-        System.out.print("Enter Player 2 name: ");
-        String name2 = commandParser.getUserInput();
-        System.out.print("Enter the match length (e.g., 3, 5, 7): ");
-        int matchLength = Integer.parseInt(commandParser.getUserInput());
+        String name1  = getPlayerName("Enter Player 1 name: ");
+        String name2 = getPlayerName("Enter Player 2 name: ");
+        int matchLength = getValidMatchLength();
 
         matchManager = new MatchManager(name1, name2, matchLength);
         gameService = new GameService(matchManager);
@@ -70,81 +48,127 @@ public class GameController {
     private void playMatch() {
         while (!matchManager.isMatchOver()) {
             playSingleGame();
-            gameService.updateScore();
-        }
-    }
 
-
-    private void playSingleGame() {
-        gameService.setUpGame();
-
-        while (true) {
-            try {
-                if (matchManager.isGameOver()) {
-                    matchManager.setGameOver(false);
-                    break;
-                }
-
-                gameService.displayGameState();
-
-                String input = commandParser.getUserInput();
-                Command command = commandParser.parseCommand(input);
-
-                if (command instanceof TestCommand testCommand) {
-                    gameService.executeCommand(testCommand);
-                    continue; // After file processing, continue manual input
-                }
-
-                switch (command.getType()) {
-                    case QUIT:
-                        System.out.println(QUIT_MESSAGE);
-                        return;
-                    case HINT:
-                        displayHint();
-                        break;
-                    case END_MATCH:
-                        System.out.println("Ending the current match...");
-                        handleEndMatch();
-                        return;
-                    case DOUBLE:
-                        gameService.offerDouble();
-                        break;
-                    case ACCEPT:
-                        gameService.acceptDouble();
-                        break;
-                    case REFUSE:
-                        gameService.refuseDouble();
-                        break;
-                    default:
-                        gameService.executeCommand(command);
-                }
-
-                if (gameService.isGameOver()) {
-                    gameService.displayGameState();
-                    gameService.updateScore();
-                    System.out.println(GAME_WON_MESSAGE);
-                    break;
-                }
-            } catch (InvalidCommandException | InvalidMoveException e) {
-                System.out.println(e.getMessage());
+            if(!matchManager.isMatchOver()) {
+                matchManager.incrementGamesPlayed();
             }
         }
     }
 
+    private void playSingleGame() {
+        // Set up a new game before handling commands
+        gameService.setUpGame();
 
+        while (!gameService.isGameOver()) {
+            // Display current game state and await user command
+            gameService.displayGameState();
+
+            String input = commandParser.getUserInput();
+            Command command;
+            try {
+                command = commandParser.parseCommand(input);
+            } catch (InvalidCommandException e) {
+                System.out.println(e.getMessage());
+                continue;
+            }
+
+            try {
+                if (command instanceof TestCommand testCommand) {
+                    // Execute test command directly on gameService
+                    gameService.executeCommand(testCommand);
+                    continue;
+                }
+
+                switch (command.getType()) {
+                    case QUIT -> {
+                        // Immediately end everything
+                        handleQuit();
+                        System.exit(0);
+                    }
+                    case HINT -> displayHint();
+                    case END_GAME -> {
+                        // End current game and return control to playMatch
+                        handleEndGame();
+                        return;
+                    }
+                    case END_MATCH -> {
+                        // End the entire match
+                        handleEndMatch();
+                        return;
+                    }
+                    case DOUBLE -> gameService.offerDouble();
+                    case ACCEPT, REFUSE -> throw new InvalidCommandException("This command can only be used in case of a double offer!");
+                    default -> gameService.executeCommand(command);
+                }
+            } catch (InvalidCommandException e) {
+                System.out.println(e.getMessage());
+            }
+            if(gameService.isGameOver()) {
+                handleEndGame();
+            }
+        }
+    }
+
+    private void handleEndGame() {
+        System.out.println("Ending current game!");
+        updateScoreAndAnnounceWinner(false);
+        gameService.setGameOver(true);
+    }
 
     private void handleEndMatch() {
-        Player highestScorer = matchManager.getPlayer1Score() > matchManager.getPlayer2Score()
-                ? matchManager.getPlayer1()
-                : matchManager.getPlayer2();
-        matchManager.incrementScore(highestScorer, SINGLE);
-        System.out.println("Match ended early. " + highestScorer.getName() + " is awarded 1 point!");
+        System.out.println("Ending the current match...");
+        updateScoreAndAnnounceWinner(true);
+        matchManager.setMatchOver(true);
+    }
+
+    private void handleQuit() {
+        updateScoreAndAnnounceWinner(true);
+        System.out.println(QUIT_MESSAGE);
+        commandParser.close();
+    }
+
+    private void updateScoreAndAnnounceWinner(boolean matchEnd) {
+        gameService.updateScore();
+        announceWinner(matchEnd);
+    }
+
+    private void announceWinner(boolean matchEnd) {
+        String winner = matchManager.getWinnerName();
+        System.out.println(matchEnd? "Match Over!": "Game Over! " + (winner.equals("Draw") ? "It's a draw!" : winner + " wins the current game!"));
     }
 
     private void displayHint() {
         System.out.println("Available commands:");
         for (CommandType type : CommandType.values()) {
             System.out.println("- " + type.name());
+        }
+    }
+
+    private String getPlayerName(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String name = commandParser.getUserInput();
+            if (!name.isEmpty()) {
+                return name;
+            }
+            System.out.println("Player name cannot be empty. Please try again.");
+        }
+    }
+
+    private int getValidMatchLength() {
+        while (true) {
+            System.out.print("Enter the match length (e.g., 3, 5, 7): ");
+            String input = commandParser.getUserInput();
+            try {
+                int matchLength = Integer.parseInt(input);
+                if (matchLength > 0) {
+                    return matchLength;
+                } else {
+                    System.out.println("Match length must be a positive integer. Try again.");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a valid number for match length.");
+            }
         }
     }
 }

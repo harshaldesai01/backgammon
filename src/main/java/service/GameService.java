@@ -2,10 +2,8 @@ package service;
 
 import enums.CommandType;
 import exceptions.InvalidCommandException;
-import exceptions.InvalidMoveException;
 import model.Checker;
 import model.Dice;
-import model.DoublingCube;
 import model.Player;
 import util.*;
 
@@ -18,11 +16,12 @@ import java.util.List;
 
 public class GameService {
     private final MatchManager matchManager;
+    private final DoublingManager doublingManager;
     private BoardService boardService;
     private Player currentPlayer;
     private final Dice dice = new Dice();
-    private final DoublingCube doublingCube;
     private final CommandParser commandParser = new CommandParser();
+    private boolean gameOver;
 
     private boolean isDiceSet = false;
     private int presetRoll1;
@@ -40,10 +39,11 @@ public class GameService {
 
     public GameService(MatchManager matchManager) {
         this.matchManager = matchManager;
-        this.doublingCube = new DoublingCube();
+        this.doublingManager = new DoublingManager();
     }
 
     public void setUpGame() {
+        gameOver = false;
         boardService = new BoardService(matchManager.getPlayer1(), matchManager.getPlayer2());
         determineStartingPlayer();
     }
@@ -64,7 +64,6 @@ public class GameService {
                     toggleCurrentPlayer();
                 }
                 case PIP -> displayPipCounts();
-                case END_MATCH -> handleEndMatch();
                 default -> System.out.println("Unknown command. Please try again.");
             }
         }
@@ -92,50 +91,99 @@ public class GameService {
         }
     }
 
-
-
-
     public void updateScore() {
-        Player winner = currentPlayer;
-        Player loser = getOpponentPlayer();
+        // Determine the winner based on either borne-off checkers or pip counts
+        Player winner = determineWinner();
+        Player loser = (winner == matchManager.getPlayer1()) ? matchManager.getPlayer2() : matchManager.getPlayer1();
 
-        int points = calculatePoints(winner, loser);
+        int basePoints = doublingManager.getDoublingCube().getValue();
+        int score = calculateScore(winner, loser, basePoints);
 
-        System.out.printf("%s wins the game and scores %d point(s)!%n", winner.getName(), points);
-        matchManager.incrementScore(winner, points);
-        doublingCube.reset();
+        // Update the scores in the match manager
+        matchManager.incrementScore(winner, score);
     }
 
-    private int calculatePoints(Player winner, Player loser) {
-        int basePoints = doublingCube.getValue();
-        if (isBackgammon(loser)) {
-            System.out.printf("Backgammon! %s scores triple points!%n", winner.getName());
-            return basePoints * CommonConstants.BACKGAMMON;
-        } else if (isGammon(loser)) {
-            System.out.printf("Gammon! %s scores double points!%n", winner.getName());
-            return basePoints * CommonConstants.GAMMON;
+    private Player determineWinner() {
+        boolean player1AllOff = isAllCheckersBorneOff(matchManager.getPlayer1());
+        boolean player2AllOff = isAllCheckersBorneOff(matchManager.getPlayer2());
+
+        if (player1AllOff && !player2AllOff) {
+            return matchManager.getPlayer1();
+        } else if (player2AllOff && !player1AllOff) {
+            return matchManager.getPlayer2();
+        } else if (!player1AllOff && !player2AllOff) {
+            // If no one has borne off all checkers, determine by pip count
+            int p1PipCount = calculatePipCount(matchManager.getPlayer1());
+            int p2PipCount = calculatePipCount(matchManager.getPlayer2());
+
+            if (p1PipCount < p2PipCount) {
+                return matchManager.getPlayer1();
+            } else if (p2PipCount < p1PipCount) {
+                return matchManager.getPlayer2();
+            } else {
+                // It's a tie (Draw scenario). Handle according to your game rules.
+                // For now, we'll treat a tie as a "no winner" scenario.
+                return null;
+            }
         }
-        return basePoints;
+
+        // If both have borne off all checkers at the same time (very unlikely in standard rules),
+        // handle it as a draw or special case if needed.
+        return null;
     }
 
-
-    private boolean isGammon(Player player) {
-        // The opponent has not borne off any checkers
-        return boardService.getBoard().getBearOffForPlayer(player).isEmpty();
-    }
-
-    private boolean isBackgammon(Player player) {
-        // The opponent has not borne off any checkers
-        // AND has checkers on the bar or in the winner's home board
-        if (!isGammon(player)) {
-            return false;
+    private int calculateScore(Player winner, Player loser, int basePoints) {
+        // If there's no winner (e.g., a draw situation), return no score
+        if (winner == null) {
+            return 0;
         }
 
+        // Check if the winner borne off all checkers (since winner determination is partly based on this)
+        boolean winnerAllOff = isAllCheckersBorneOff(winner);
+
+        if (winnerAllOff) {
+            // If winner got all checkers off, check conditions for Gammon/Backgammon
+            if (isGammon(winner, loser)) {
+                System.out.println("It's a gammon! Points will be doubled.");
+                return basePoints * 2;
+            } else if (isBackgammon(winner, loser)) {
+                System.out.println("It's a Backgammon! Points will be trippled.");
+                return basePoints * 3; // Typically backgammon is *3, but if you want *2, adjust here.
+            } else {
+                // Regular single game win by bearing off all checkers
+                return basePoints;
+            }
+        } else {
+            // If game ended early (no one borne off all checkers), winner is determined by pip count
+            return basePoints;
+        }
+    }
+
+    private boolean isAllCheckersBorneOff(Player player) {
+        // Check if the player has borne off all 15 checkers
+        int borneOffCount = boardService.getBearOffForPlayer(player).size();
+        return borneOffCount == 15;
+    }
+
+    private boolean isGammon(Player winner, Player loser) {
+        // Gammon: If winner borne off all checkers and the loser has none borne off
+        int loserBorneOffCount = boardService.getBearOffForPlayer(loser).size();
+        return loserBorneOffCount == 0 && !hasCheckersOnBarOrInWinnerHomeBoard(loser, winner);
+    }
+
+    private boolean isBackgammon(Player winner, Player loser) {
+        // Backgammon: If winner borne off all checkers and loser either:
+        // - Still has checkers in winner's home quadrant
+        // - Or has checkers on the bar
+        return hasCheckersOnBarOrInWinnerHomeBoard(loser, winner);
+    }
+
+    private boolean hasCheckersOnBarOrInWinnerHomeBoard(Player player, Player winner) {
         boolean hasCheckersOnBar = !boardService.getBoard().getBarForPlayer(player).isEmpty();
-        boolean hasCheckersInWinnerHomeBoard = hasCheckersInHomeBoard(player, currentPlayer);
-
+        boolean hasCheckersInWinnerHomeBoard = hasCheckersInHomeBoard(player, winner);
         return hasCheckersOnBar || hasCheckersInWinnerHomeBoard;
     }
+
 
     private boolean hasCheckersInHomeBoard(Player player, Player winner) {
         int homeStart, homeEnd;
@@ -161,14 +209,15 @@ public class GameService {
     }
 
     public boolean isGameOver() {
-        if (hasPlayerWon(matchManager.getPlayer1())) {
-            System.out.println("Congratulations " + matchManager.getPlayer1().getName() + ", you have won the game!");
-            return true;
-        } else if (hasPlayerWon(matchManager.getPlayer2())) {
-            System.out.println("Congratulations " + matchManager.getPlayer2().getName() + ", you have won the game!");
-            return true;
-        }
-        return false;
+        return gameOver || isGameOverCondition();
+    }
+
+    private boolean isGameOverCondition() {
+        return isAllCheckersBorneOff(matchManager.getPlayer1()) || isAllCheckersBorneOff(matchManager.getPlayer2());
+    }
+
+    public void setGameOver(boolean gameOver) {
+        this.gameOver = gameOver;
     }
 
     public void displayGameState() {
@@ -179,11 +228,11 @@ public class GameService {
 
         System.out.println("\nCurrent Game State:");
         boardService.displayBoard();
-        System.out.println("Doubling Cube Value: " + doublingCube.getValue());
-        if (doublingCube.getOwner() == null) {
+        System.out.println("Doubling Cube Value: " + doublingManager.getDoublingCube().getValue());
+        if (doublingManager.getDoublingCube().getOwner() == null) {
             System.out.println("The cube is in the middle (no owner).");
         } else {
-            System.out.println("Doubling cube owned by: " + doublingCube.getOwner().getName());
+            System.out.println("Doubling cube owned by: " + doublingManager.getDoublingCube().getOwner().getName());
         }
         System.out.println("It's " + currentPlayer.getName() + "'s turn.");
         System.out.println(currentPlayer.getName() + "'s pip count: " + calculatePipCount(currentPlayer));
@@ -212,35 +261,26 @@ public class GameService {
     }
 
     private void determineStartingPlayer() {
-        int rollPlayer1, rollPlayer2;
         System.out.println("Rolling dice to determine who goes first...");
-        do {
-            rollPlayer1 = dice.roll();
-            rollPlayer2 = dice.roll();
+        while (true) {
+            int rollPlayer1 = dice.roll();
+            int rollPlayer2 = dice.roll();
+
             System.out.println(matchManager.getPlayer1().getName() + " rolled: " + rollPlayer1);
             System.out.println(matchManager.getPlayer2().getName() + " rolled: " + rollPlayer2);
 
-            if (rollPlayer1 > rollPlayer2) {
-                currentPlayer = matchManager.getPlayer1();
+            if (rollPlayer1 != rollPlayer2) {
+                currentPlayer = rollPlayer1 > rollPlayer2 ? matchManager.getPlayer1() : matchManager.getPlayer2();
                 System.out.println(currentPlayer.getName() + " goes first!");
-            } else if (rollPlayer2 > rollPlayer1) {
-                currentPlayer = matchManager.getPlayer2();
-                System.out.println(currentPlayer.getName() + " goes first!");
-            } else {
-                System.out.println("It's a tie! Rolling again...");
+                break;
             }
-        } while (rollPlayer1 == rollPlayer2);
+
+            System.out.println("It's a tie! Rolling again...");
+        }
     }
 
     private void toggleCurrentPlayer() {
         currentPlayer = currentPlayer.equals(matchManager.getPlayer1()) ? matchManager.getPlayer2() : matchManager.getPlayer1();
-    }
-
-    private boolean hasPlayerWon(Player player) {
-        return boardService.getBearOffForPlayer(player).size() + boardService.getPositions().values().stream()
-                .flatMap(List::stream)
-                .filter(checker -> checker.getOwner().equals(player))
-                .count() == 0;
     }
 
     private int calculatePipCount(Player player) {
@@ -258,27 +298,16 @@ public class GameService {
     }
 
     private void playRoll(Player player, int roll1, int roll2) {
-        List<Integer> rolls = new ArrayList<>();
-        if (roll1 == roll2) {
-            for (int i = 0; i < 4; i++) rolls.add(roll1);
-        } else {
-            rolls.add(roll1);
-            rolls.add(roll2);
-        }
+        List<Integer> rolls = generateRolls(roll1, roll2);
 
         while (!rolls.isEmpty()) {
             List<String> options = generateMoveOptions(player, rolls);
             if (options.isEmpty()) {
-                System.out.println("No legal moves available for the current rolls. Turn passes to the next player.");
+                System.out.println(CommonConstants.NO_LEGAL_MOVES_MESSAGE);
                 break;
             }
 
-            System.out.println("Available move options for current roll:");
-            char optionLetter = 'A';
-            for (String option : options) {
-                System.out.println(optionLetter + ") " + option);
-                optionLetter++;
-            }
+            displayMoveOptions(options);
 
             char selectedOption;
             if (isFileInputMode) {
@@ -301,11 +330,31 @@ public class GameService {
             boolean successfulMove = executeSelectedOption(selectedOption, options, rolls);
 
             if (!successfulMove) {
-                System.out.println("Invalid selection. Please try again.");
+                System.out.println(CommonConstants.INVALID_SELECTION_MESSAGE);
                 continue;
             }
             displayGameState();
         }
+    }
+
+    private void displayMoveOptions(List<String> options) {
+        System.out.println("Available move options:");
+        char optionLetter = 'A';
+        for (String option : options) {
+            System.out.println(optionLetter + ") " + option);
+            optionLetter++;
+        }
+    }
+
+    private List<Integer> generateRolls(int roll1, int roll2) {
+        List<Integer> rolls = new ArrayList<>();
+        if (roll1 == roll2) {
+            for (int i = 0; i < 4; i++) rolls.add(roll1);
+        } else {
+            rolls.add(roll1);
+            rolls.add(roll2);
+        }
+        return rolls;
     }
 
     private List<String> generateMoveOptions(Player player, List<Integer> rolls) {
@@ -338,13 +387,7 @@ public class GameService {
         return barEntryMoves;
     }
 
-    private void handleEndMatch() {
-        Player highestScorer = matchManager.getPlayer1Score() > matchManager.getPlayer2Score()
-                ? matchManager.getPlayer1()
-                : matchManager.getPlayer2();
-        matchManager.incrementScore(highestScorer, CommonConstants.SINGLE);
-        System.out.println("Match ended early. " + highestScorer.getName() + " is awarded 1 point!");
-    }
+
     private char getUserSelection(int numOptions) {
         while (true) {
             try {
@@ -388,7 +431,9 @@ public class GameService {
                 boardService.getBoard().bearOffChecker(currentPlayer, fromPosition);
 
                 // Calculate rollUsed for bear-off moves
-                rollUsed = Math.abs((currentPlayer == matchManager.getPlayer1() ? 0 : 25) - fromPosition);
+                rollUsed = rolls.stream()
+                        .filter(roll -> roll >= Math.abs((currentPlayer == matchManager.getPlayer1()? 25: 0) - fromPosition)).findFirst()
+                        .orElseThrow(() -> new IllegalStateException("No valid rolls available for bearing off"));
             } else {
                 // Regular move handling
                 String[] moveParts = chosenMove.split(" -> ");
@@ -408,78 +453,65 @@ public class GameService {
         return false;
     }
 
-    public void offerDouble() throws InvalidMoveException {
-        if (doublingCube.getOwner() == currentPlayer) {
-            throw new InvalidMoveException("You already own the cube and cannot offer a double.");
-        }
-        if (matchManager.isDoublingOffered()) {
-            throw new InvalidMoveException("A double has already been offered.");
+    public void offerDouble() throws InvalidCommandException {
+        if (null != doublingManager.getDoublingCube().getOwner() && doublingManager.getDoublingCube().getOwner() != currentPlayer) {
+            throw new InvalidCommandException("You cannot offer the doubling cube!");
         }
 
-        matchManager.setDoublingOffered(true);
-        matchManager.setPlayerToRespond(getOpponentPlayer());
-        System.out.printf("%s offers to double the stakes to %d.%n", currentPlayer.getName(), doublingCube.getValue() * 2);
+        System.out.printf("%s offers to double the stakes to %d.%n", currentPlayer.getName(), doublingManager.getDoublingCube().getValue() * 2);
 
         Player opponent = getOpponentPlayer();
+        doublingManager.setPlayerToRespond(opponent);
+        toggleCurrentPlayer();
 
+        handlingDoublingResponse(opponent);
+    }
+
+    private void handlingDoublingResponse(Player opponent) {
         while (true) {
-            currentPlayer = opponent;
             System.out.printf("%s, do you accept the double? (ACCEPT/REFUSE): ", opponent.getName());
-            String input = commandParser.getUserInput();
-
             try {
-                Command command = commandParser.parseCommand(input);
-
-                switch (command.getType()) {
-                    case ACCEPT:
-                        acceptDouble(); // Trigger accept logic
-                        return; // Exit the method after successful handling
-                    case REFUSE:
-                        refuseDouble(); // Trigger refuse logic
-                        return; // Exit the method after successful handling
-                    default:
-                        System.out.println("Invalid command. Please type 'ACCEPT' or 'REFUSE'.");
+                Command command = commandParser.parseCommand(commandParser.getUserInput());
+                if (command.getType() == CommandType.ACCEPT) {
+                    acceptDouble();
+                    return;
+                } else if (command.getType() == CommandType.REFUSE) {
+                    refuseDouble();
+                    return;
                 }
             } catch (InvalidCommandException e) {
                 System.out.println(e.getMessage());
             }
+            System.out.println("Invalid input. Please type 'ACCEPT' or 'REFUSE'.");
         }
     }
 
 
-    public void acceptDouble() throws InvalidMoveException {
-        if (!matchManager.isDoublingOffered()) {
-            throw new InvalidMoveException("No double has been offered.");
-        }
-        if (!currentPlayer.equals(matchManager.getPlayerToRespond())) {
-            throw new InvalidMoveException("It's not your turn to respond to the double.");
+    public void acceptDouble() throws InvalidCommandException {
+        if (!currentPlayer.equals(doublingManager.getPlayerToRespond())) {
+            throw new InvalidCommandException("It's not your turn to respond to the double.");
         }
 
-        doublingCube.doubleValue(currentPlayer);
-        matchManager.setDoublingOffered(false);
-        matchManager.setPlayerToRespond(null);
-        System.out.println(currentPlayer.getName() + " accepts the double. The stakes are now " + doublingCube.getValue() + ".");
+        doublingManager.getDoublingCube().doubleValue(currentPlayer);
+        doublingManager.setPlayerToRespond(null);
+        System.out.println(currentPlayer.getName() + " accepts the double. The stakes are now " + doublingManager.getDoublingCube().getValue() + ".");
     }
 
-    public void refuseDouble() throws InvalidMoveException {
-        if (!matchManager.isDoublingOffered()) {
-            throw new InvalidMoveException("No double has been offered.");
-        }
-        if (!currentPlayer.equals(matchManager.getPlayerToRespond())) {
-            throw new InvalidMoveException("It's not your turn to respond to the double.");
+    public void refuseDouble() throws InvalidCommandException {
+        if (!currentPlayer.equals(doublingManager.getPlayerToRespond())) {
+            throw new InvalidCommandException("It's not your turn to respond to the double.");
         }
 
         Player winner = getOpponentPlayer();
-        int points = doublingCube.getValue();
+        int points = doublingManager.getDoublingCube().getValue();
         matchManager.incrementScore(winner, points);
 
-        System.out.println(currentPlayer.getName() + " refuses the double. " + winner.getName() + " wins " + points + " point(s).");
+        System.out.println(currentPlayer.getName() + " refuses the double. ");
 
         // Reset for next game
-        doublingCube.reset();
-        matchManager.setDoublingOffered(false);
-        matchManager.setPlayerToRespond(null);
-        matchManager.setGameOver(true);
+        doublingManager.getDoublingCube().reset();
+        doublingManager.setPlayerToRespond(null);
+        setGameOver(true);
     }
 
     private Player getOpponentPlayer() {

@@ -18,12 +18,8 @@ public class DoublingCube {
     }
 
     public void doubleValue(Player newOwner) {
-        if (value < 64) {
-            value *= 2;
-            owner = newOwner;
-        } else {
-            System.out.println("Maximum cube value reached.");
-        }
+        value *= 2;
+        owner = newOwner;
     }
 
     public void reset() {
