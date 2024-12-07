@@ -1,0 +1,44 @@
+dice 6 3
+roll
+A
+B
+dice 4 4
+roll
+B
+C
+A
+A
+dice 4 2
+roll
+A
+B
+dice 5 2
+roll
+A
+B
+dice 3 3
+roll
+A
+B
+C
+D
+dice 2 5
+roll
+A
+B
+dice 5 1
+roll
+A
+B
+dice 3 4
+roll
+A
+B
+dice 2 2
+roll
+dice 6 6
+roll
+A
+B
+C
+A

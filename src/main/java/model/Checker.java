@@ -2,7 +2,7 @@ package model;
 
 public class Checker {
     private String color;
-    private final Player owner; // The player who owns this checker
+    private final Player owner;
 
     public Checker(String color, Player owner) {
         this.color = color;

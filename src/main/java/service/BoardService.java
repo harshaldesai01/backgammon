@@ -22,12 +22,10 @@ public class BoardService {
         return board;
     }
 
-    // Method to get bear-off checkers for a player
     public List<Checker> getBearOffForPlayer(Player player) {
         return board.getBearOffForPlayer(player);
     }
 
-    // Method to get positions of checkers
     public Map<Integer, List<Checker>> getPositions() {
         return board.getPositions();
     }
