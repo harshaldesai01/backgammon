@@ -8,7 +8,9 @@ import util.Command;
 import util.CommandParser;
 import util.TestCommand;
 
-import static util.CommonConstants.*;
+import static util.CommonConstants.HORIZONTAL_DIVIDER;
+import static util.CommonConstants.QUIT_MESSAGE;
+import static util.CommonConstants.WELCOME_MESSAGE;
 
 public class GameController {
     private final CommandParser commandParser;
