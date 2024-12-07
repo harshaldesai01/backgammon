@@ -24,6 +24,19 @@ public class CommandParser {
                 return new TestCommand(type, parts[1].trim());
             }
 
+            if(type == CommandType.DICE) {
+                if (parts.length != 3) {
+                    throw new InvalidCommandException("Invalid DICE command format. Use: dice <int> <int>");
+                }
+                try {
+                    int roll1 = Integer.parseInt(parts[1].trim());
+                    int roll2 = Integer.parseInt(parts[2].trim());
+                    return new DiceCommand(type, roll1, roll2);
+                } catch (NumberFormatException e) {
+                    throw new InvalidCommandException("Invalid DICE command format. Use: dice <int> <int>");
+                }
+            }
+
             return new Command(type);
         } catch (IllegalArgumentException e) {
             throw new InvalidCommandException("Invalid command: '" + input + "'. Type 'HINT' for valid commands.");

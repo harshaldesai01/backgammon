@@ -54,8 +54,6 @@ public class GameController {
             matchManager.incrementGamesPlayed();
             gameService.updateScore();
         }
-
-        announceMatchWinner();
     }
 
     private void playSingleGame() {
