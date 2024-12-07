@@ -66,6 +66,10 @@ public class MatchManager {
         this.matchOver = matchOver;
     }
 
+    public int getGamesNumber() {
+        return gamesPlayed+1;
+    }
+
     public int getMatchLength() {
         return matchLength;
     }

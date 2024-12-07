@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
 
+import static util.CommonConstants.HORIZONTAL_DIVIDER;
+
 public class Board {
     private final Map<Integer, List<Checker>> positions = new HashMap<>();
     private final Player player1;
@@ -24,14 +26,13 @@ public class Board {
         int maxCheckers = getMaxCheckersInPosition();
 
         System.out.println("Backgammon Board:");
-        System.out.println("----------------------------------------------------------------------");
+        System.out.println(HORIZONTAL_DIVIDER);
 
-        // Top side (points 13 to 24)
         System.out.print("|");
         for (int i = 13; i <= 24; i++) {
             System.out.printf(" %2d |", i);
         }
-        // Now print 'OFF' column header for Player 2
+
         System.out.print(" OFF |");
         System.out.println();
         System.out.println("-------------------------------------------------------------------");
@@ -47,16 +48,14 @@ public class Board {
                 }
                 System.out.print(" |");
             }
-            // Now print the bear-off checkers for Player 2
-            if (row < bearOffPlayer2.size()) {
-                System.out.print("  X  |"); // Player 2's bear-off checkers
+            if (row < bearOffPlayer1.size()) {
+                System.out.print("  O  |");
             } else {
                 System.out.print("     |");
             }
             System.out.println();
         }
 
-        // Middle bar
         System.out.println("------------------------------- BAR -------------------------------");
         System.out.print("Player 1 Bar: ");
         barPlayer1.forEach(c -> System.out.print("O "));
@@ -65,12 +64,11 @@ public class Board {
         System.out.println();
         System.out.println("------------------------------- BAR -------------------------------");
 
-        // Bottom side (points 12 to 1)
         System.out.print("|");
         for (int i = 12; i >= 1; i--) {
             System.out.printf(" %2d |", i);
         }
-        // Now print 'OFF' column header for Player 1
+
         System.out.print(" OFF |");
         System.out.println();
         System.out.println("-------------------------------------------------------------------");
@@ -86,18 +84,16 @@ public class Board {
                 }
                 System.out.print(" |");
             }
-            // Now print the bear-off checkers for Player 1
-            if (row < bearOffPlayer1.size()) {
-                System.out.print("  O  |"); // Player 1's bear-off checkers
+
+            if (row < bearOffPlayer2.size()) {
+                System.out.print("  X  |");
             } else {
                 System.out.print("     |");
             }
             System.out.println();
         }
 
-        System.out.println("----------------------------------------------------------------------");
-
-        // Display bar separately if needed
+        System.out.println(HORIZONTAL_DIVIDER);
 
         System.out.println();
     }
@@ -112,7 +108,6 @@ public class Board {
         return max;
     }
 
-    // Initialize the board with checkers owned by specific players
     private void initializeBoard() {
         positions.put(1, createCheckers("White", 2, player1));
         positions.put(6, createCheckers("Black", 5, player2));
@@ -132,7 +127,6 @@ public class Board {
         return checkers;
     }
 
-    // Get all legal moves based on dice roll and current board state
     public List<String> getLegalMoves(Player player, List<Integer> rolls) {
         List<String> legalMoves = new ArrayList<>();
         int direction = (player == player1) ? 1 : -1;
@@ -144,7 +138,6 @@ public class Board {
                 for (int roll : rolls) {
                     int targetPosition = position + roll * direction;
 
-                    // Bear-off condition: allow moves to positions off the board if eligible
                     if (canBearOff && isBearOffPosition(player, targetPosition)) {
                         legalMoves.add(position + " -> OFF");
                     } else if (isLegalMove(player, position, targetPosition)) {
@@ -156,7 +149,6 @@ public class Board {
         return legalMoves;
     }
 
-    // Determine if the player is allowed to bear off (all checkers in the home board)
     private boolean canBearOff(Player player) {
         int homeStart = (player == player1) ? 19 : 1;
         int homeEnd = (player == player1) ? 24 : 6;
@@ -165,40 +157,34 @@ public class Board {
             if (position < homeStart || position > homeEnd) {
                 List<Checker> checkers = positions.get(position);
                 if (!checkers.isEmpty() && checkers.get(0).getOwner().equals(player)) {
-                    return false; // Found a checker outside the home board
+                    return false;
                 }
             }
         }
         return true;
     }
 
-    // Check if a move is legal by evaluating hits, blockades, and empty positions
     private boolean isLegalMove(Player player, int fromPosition, int toPosition) {
-        // Check if the fromPosition is within the board boundaries
         if (fromPosition < 1 || fromPosition > 24) {
-            return false; // Outside board limits for fromPosition
+            return false;
         }
 
-        // Check if the toPosition is within the board boundaries
         if (toPosition < 1 || toPosition > 24) {
-            return false; // Outside board limits for toPosition
+            return false;
         }
 
         List<Checker> fromPositionCheckers = positions.getOrDefault(fromPosition, new ArrayList<>());
         List<Checker> toPositionCheckers = positions.getOrDefault(toPosition, new ArrayList<>());
 
-        // Ensure there is at least one checker of the player's color at the fromPosition
         if (fromPositionCheckers.isEmpty() || !fromPositionCheckers.get(0).getOwner().equals(player)) {
             return false;
         }
 
-        // Allow move if toPosition has no checkers, player's own checkers, or only one checker of the opponent
         return toPositionCheckers.isEmpty() ||
                 toPositionCheckers.get(0).getOwner().equals(player) ||
                 (toPositionCheckers.size() == 1 && !toPositionCheckers.get(0).getOwner().equals(player));
     }
 
-    // Update the board to reflect a move, applying hits or bear-offs if needed
     public void makeMove(Player player, int fromPosition, int toPosition) {
         List<Checker> fromCheckers = positions.get(fromPosition);
         if (fromCheckers == null || fromCheckers.isEmpty()) {
@@ -234,13 +220,12 @@ public class Board {
     public boolean canEnterFromBar(Player player, int toPosition) {
         List<Checker> targetPositionCheckers = positions.getOrDefault(toPosition, new ArrayList<>());
 
-        // Check if the target position is empty, occupied by the player's own checkers, or has a single opponent checker
         if (targetPositionCheckers.isEmpty()) {
-            return true; // Can enter an empty spot
+            return true;
         } else if (targetPositionCheckers.get(0).getOwner().equals(player)) {
-            return true; // Can stack on own checkers
+            return true;
         } else {
-            return targetPositionCheckers.size() == 1; // Can hit a single opponent checker
+            return targetPositionCheckers.size() == 1;
         }
     }
 
@@ -255,7 +240,6 @@ public class Board {
     }
 
     private void handleHitAndUpdatePosition(Player player, Checker movingChecker, List<Checker> toCheckers, int toPosition) {
-        // Check for hits
         if (!toCheckers.isEmpty() && !toCheckers.get(0).getOwner().equals(player)) {
             Checker hitChecker = toCheckers.remove(0);
             if (player == player1) {
@@ -265,7 +249,6 @@ public class Board {
             }
         }
 
-        // Update the destination position with the moving checker
         toCheckers.add(movingChecker);
         positions.put(toPosition, toCheckers);
     }
@@ -278,17 +261,14 @@ public class Board {
             return;
         }
 
-        // Remove the checker from the fromPosition
         Checker movingChecker = fromCheckers.remove(fromCheckers.size() - 1);
 
-        // If the from position is now empty, remove it from positions
         if (fromCheckers.isEmpty()) {
             positions.remove(fromPosition);
         } else {
             positions.put(fromPosition, fromCheckers);
         }
 
-        // Add checker to the player's bear-off collection
         if (player == player1) {
             bearOffPlayer1.add(movingChecker);
         } else {

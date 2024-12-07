@@ -47,6 +47,7 @@ public class GameController {
 
     private void playMatch() {
         while (!matchManager.isMatchOver()) {
+            System.out.println(HORIZONTAL_DIVIDER);
             playSingleGame();
 
             if(!matchManager.isMatchOver()) {
@@ -56,11 +57,9 @@ public class GameController {
     }
 
     private void playSingleGame() {
-        // Set up a new game before handling commands
         gameService.setUpGame();
 
         while (!gameService.isGameOver()) {
-            // Display current game state and await user command
             gameService.displayGameState();
 
             String input = commandParser.getUserInput();
@@ -74,25 +73,21 @@ public class GameController {
 
             try {
                 if (command instanceof TestCommand testCommand) {
-                    // Execute test command directly on gameService
                     gameService.executeCommand(testCommand);
                     continue;
                 }
 
                 switch (command.getType()) {
                     case QUIT -> {
-                        // Immediately end everything
                         handleQuit();
                         System.exit(0);
                     }
                     case HINT -> displayHint();
                     case END_GAME -> {
-                        // End current game and return control to playMatch
                         handleEndGame();
                         return;
                     }
                     case END_MATCH -> {
-                        // End the entire match
                         handleEndMatch();
                         return;
                     }
@@ -113,12 +108,15 @@ public class GameController {
         System.out.println("Ending current game!");
         updateScoreAndAnnounceWinner(false);
         gameService.setGameOver(true);
+        System.out.println(HORIZONTAL_DIVIDER);
     }
 
     private void handleEndMatch() {
         System.out.println("Ending the current match...");
         updateScoreAndAnnounceWinner(true);
         matchManager.setMatchOver(true);
+        System.out.println(HORIZONTAL_DIVIDER);
+        System.out.println(HORIZONTAL_DIVIDER);
     }
 
     private void handleQuit() {
@@ -134,14 +132,20 @@ public class GameController {
 
     private void announceWinner(boolean matchEnd) {
         String winner = matchManager.getWinnerName();
-        System.out.println(matchEnd? "Match Over!": "Game Over! " + (winner.equals("Draw") ? "It's a draw!" : winner + " wins the current game!"));
+
+        if(matchEnd)
+            System.out.println("Match Over! "+ (winner.equals("Draw") ? "It's a draw!" : winner+" wins!!"));
+        else
+            System.out.println("Game Over! " + (winner.equals("Draw") ? "It's a draw!" : winner + " wins the current game!"));
     }
 
     private void displayHint() {
+        System.out.println(HORIZONTAL_DIVIDER);
         System.out.println("Available commands:");
         for (CommandType type : CommandType.values()) {
             System.out.println("- " + type.name());
         }
+
     }
 
     private String getPlayerName(String prompt) {
