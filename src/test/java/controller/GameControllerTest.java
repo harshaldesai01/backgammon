@@ -1,108 +1,89 @@
 package controller;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import enums.CommandType;
+import exceptions.InvalidCommandException;
+import org.junit.jupiter.api.*;
+import util.Command;
 import util.CommandParser;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-@Disabled
+/**
+ * JUnit test class for GameController using Mockito.
+ */
 class GameControllerTest {
-    private GameController gameController;
-    private ByteArrayOutputStream outputStream;
+
     private CommandParser mockCommandParser;
+    private GameController gameController;
+
+    // Streams to capture System.out output
+    private final ByteArrayOutputStream outContent = new
+            ByteArrayOutputStream();
+    private final PrintStream originalOut = System.out;
 
     @BeforeEach
     void setUp() {
-        outputStream = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outputStream));
-
+        // Initialize the mock CommandParser
         mockCommandParser = mock(CommandParser.class);
-        gameController = new GameController();
+
+        // Initialize GameController with the mocked CommandParser
+        gameController = new GameController(mockCommandParser);
+
+        // Redirect System.out to capture outputs
+        System.setOut(new PrintStream(outContent));
+    }
+
+    @AfterEach
+    void tearDown() {
+        // Restore original System.out
+        System.setOut(originalOut);
     }
 
     @Test
-    void testStartGameQuitImmediately() {
-        when(mockCommandParser.getUserInput())
-                .thenReturn("quit");
+    void testStartGameWithInvalidCommand() throws InvalidCommandException {
+        // Define the sequence of inputs:
+        // 1. "mans" - Player 1 name
+        // 2. "sa" - Player 2 name
+        // 3. "1" - Match length
+        // 4. "invalid_command" - Invalid command
+        // 5. "no" - Terminate the game
 
+        // Mocking user inputs using Mockito's when().thenReturn() chaining
+        when(mockCommandParser.getUserInput())
+                .thenReturn("mans")            // Player 1 name
+                .thenReturn("sa")              // Player 2 name
+                .thenReturn("1")               // Match length
+                .thenReturn("invalid_command") // Invalid command
+                .thenReturn("no");             // Terminate the game
+
+        // Mocking parseCommand() behavior for invalid command
+        when(mockCommandParser.parseCommand("invalid_command"))
+                .thenThrow(new InvalidCommandException("Invalid command: 'invalid_command'. Type 'HINT' for valid commands."));
+
+        // Mocking parseCommand() behavior for terminating the game
+        when(mockCommandParser.parseCommand("no"))
+                .thenReturn(new Command(CommandType.QUIT));
+
+        // Attempt to start the game
         gameController.startGame();
 
-        String output = outputStream.toString();
-        assertTrue(output.contains("Welcome to Backgammon!"));
-        assertTrue(output.contains("Thank you for playing Backgammon!"));
-    }
+        // Convert captured output to string
+        String output = outContent.toString();
 
-    @Test
-    void testSetupNewMatch() {
-        when(mockCommandParser.getUserInput())
-                .thenReturn("Alice") // Player 1 name
-                .thenReturn("Bob")   // Player 2 name
-                .thenReturn("3")     // Match length
-                .thenReturn("quit");   // Exit game
+        Assertions.assertTrue(output.contains("Welcome to Backgammon!"), "Should display welcome message.");
+        Assertions.assertTrue(output.contains("Enter Player 1 name: "), "Should prompt for Player 1 name.");
+        Assertions.assertTrue(output.contains("Enter Player 2 name: "), "Should prompt for Player 2 name.");
+        Assertions.assertTrue(output.contains("Enter the match length (e.g., 3, 5, 7): "), "Should prompt for match length.");
+        Assertions.assertTrue(output.contains("Invalid command: 'invalid_command'. Type 'HINT' for valid commands."), "Should display invalid command error.");
 
-        gameController.startGame();
+        // Verify that getUserInput() was called exactly 5 times
+        verify(mockCommandParser, times(5)).getUserInput();
 
-        String output = outputStream.toString();
-        assertTrue(output.contains("Enter Player 1 name:"));
-        assertTrue(output.contains("Enter Player 2 name:"));
-        assertTrue(output.contains("Enter the match length"));
-    }
-
-    @Test
-    void testHandleInvalidPlayerName() {
-        when(mockCommandParser.getUserInput())
-                .thenReturn("")      // Invalid name
-                .thenReturn(" ")     // Invalid name
-                .thenReturn("Alice") // Valid name
-                .thenReturn("Bob")   // Player 2 name
-                .thenReturn("3")     // Match length
-                .thenReturn("no");   // Exit game
-
-        gameController.startGame();
-
-        String output = outputStream.toString();
-        assertTrue(output.contains("Player name cannot be empty. Please try again."));
-    }
-
-    @Test
-    void testHandleInvalidMatchLength() {
-        when(mockCommandParser.getUserInput())
-                .thenReturn("Alice") // Player 1 name
-                .thenReturn("Bob")   // Player 2 name
-                .thenReturn("-1")    // Invalid length
-                .thenReturn("abc")   // Invalid input
-                .thenReturn("3")     // Valid length
-                .thenReturn("no");   // Exit game
-
-        gameController.startGame();
-
-        String output = outputStream.toString();
-        assertTrue(output.contains("Match length must be a positive integer. Try again."));
-        assertTrue(output.contains("Invalid input. Please enter a valid number for match length."));
-    }
-
-    @Test
-    void testDisplayHint() {
-        when(mockCommandParser.getUserInput())
-                .thenReturn("Alice") // Player 1 name
-                .thenReturn("Bob")   // Player 2 name
-                .thenReturn("3")     // Match length
-                .thenReturn("HINT")  // Display hint
-                .thenReturn("no");   // Exit game
-
-        gameController.startGame();
-
-        String output = outputStream.toString();
-        assertTrue(output.contains("Available commands:"));
-        assertTrue(output.contains("ROLL"));
-        assertTrue(output.contains("QUIT"));
-        assertTrue(output.contains("HINT"));
+        // Verify that parseCommand() was called with the correct arguments
+        verify(mockCommandParser).parseCommand("invalid_command");
+        verify(mockCommandParser).parseCommand("no");
     }
 }

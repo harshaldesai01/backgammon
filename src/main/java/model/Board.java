@@ -126,7 +126,7 @@ public class Board {
     }
 
     /**
-     * Initializes Board by placing checkers for each players
+     * Initializes Board by placing checkers for each player
      */
     private void initializeBoard() {
         positions.put(1, createCheckers("White", 2, player1));

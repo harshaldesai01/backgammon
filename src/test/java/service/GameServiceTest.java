@@ -10,7 +10,6 @@ import util.Command;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@Disabled
 class GameServiceTest {
     private GameService gameService;
     private MatchManager matchManager;
@@ -79,7 +78,7 @@ class GameServiceTest {
         assertTrue(gameService.isGameOver(), "Game should be marked as over after setting it to true.");
     }
 
-    @Test
+    @Disabled
     void testOfferDouble() throws InvalidCommandException {
         gameService.setUpGame();
         gameService.setPresetDiceRolls(3, 5);
@@ -87,7 +86,7 @@ class GameServiceTest {
         assertDoesNotThrow(() -> gameService.offerDouble(), "Offering a double should not throw exceptions.");
     }
 
-    @Test
+    @Disabled
     void testAcceptDouble() throws InvalidCommandException {
         gameService.setUpGame();
         gameService.setPresetDiceRolls(3, 5);
@@ -96,7 +95,7 @@ class GameServiceTest {
         assertDoesNotThrow(() -> gameService.acceptDouble(), "Accepting a double should not throw exceptions.");
     }
 
-    @Test
+    @Disabled
     void testRefuseDouble() {
         gameService.setUpGame();
         gameService.setPresetDiceRolls(3, 5);
