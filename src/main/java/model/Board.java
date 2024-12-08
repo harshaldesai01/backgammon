@@ -69,9 +69,9 @@ public class Board {
         }
 
         System.out.println("------------------------------- BAR -------------------------------");
-        System.out.print("Player 1 Bar: ");
+        System.out.print(player1.getName()+" Bar: ");
         barPlayer1.forEach(c -> System.out.print("O "));
-        System.out.print("\nPlayer 2 Bar: ");
+        System.out.print("\n"+player2.getName()+" Bar: ");
         barPlayer2.forEach(c -> System.out.print("X "));
         System.out.println();
         System.out.println("------------------------------- BAR -------------------------------");
