@@ -8,19 +8,26 @@ import util.Command;
 import util.CommandParser;
 import util.TestCommand;
 
-import static util.CommonConstants.HORIZONTAL_DIVIDER;
-import static util.CommonConstants.QUIT_MESSAGE;
-import static util.CommonConstants.WELCOME_MESSAGE;
+import static util.CommonConstants.*;
 
+/**
+ * Controls the overall flow of the Backgammon game, including match setup, game play, and game termination.
+ */
 public class GameController {
     private final CommandParser commandParser;
     private MatchManager matchManager;
     private GameService gameService;
 
+    /**
+     * Initializes the GameController with necessary utilities such as the CommandParser.
+     */
     public GameController() {
         this.commandParser = new CommandParser();
     }
 
+    /**
+     * Starts the game, manages matches, and facilitates user interactions.
+     */
     public void startGame() {
         System.out.println(WELCOME_MESSAGE);
 
@@ -28,16 +35,19 @@ public class GameController {
             setupNewMatch();
             playMatch();
 
-            System.out.print("Would you like to start a new match? (yes/no): ");
+            System.out.print(NEW_MATCH_PROMPT);
             String response = commandParser.getUserInput();
             if (!response.equalsIgnoreCase("yes")) {
-                System.out.println("Thank you for playing Backgammon!");
+                System.out.println(FINAL_THANK_YOU_MESSAGE);
                 commandParser.close();
                 break;
             }
         }
     }
 
+    /**
+     * Sets up a new match by collecting player names and match length from the user.
+     */
     private void setupNewMatch() {
         String name1  = getPlayerName("Enter Player 1 name: ");
         String name2 = getPlayerName("Enter Player 2 name: ");
@@ -47,6 +57,9 @@ public class GameController {
         gameService = new GameService(matchManager);
     }
 
+    /**
+     * Manages the match gameplay until the match is completed.
+     */
     private void playMatch() {
         while (!matchManager.isMatchOver()) {
             System.out.println(HORIZONTAL_DIVIDER);
@@ -58,6 +71,9 @@ public class GameController {
         }
     }
 
+    /**
+     * Plays a single game within the match, handling player inputs and game state transitions.
+     */
     private void playSingleGame() {
         gameService.setUpGame();
 
@@ -94,7 +110,7 @@ public class GameController {
                         return;
                     }
                     case DOUBLE -> gameService.offerDouble();
-                    case ACCEPT, REFUSE -> throw new InvalidCommandException("This command can only be used in case of a double offer!");
+                    case ACCEPT, REFUSE -> throw new InvalidCommandException(DOUBLING_COMMANDS_ERROR_MESSAGE);
                     default -> gameService.executeCommand(command);
                 }
             } catch (InvalidCommandException e) {
@@ -106,41 +122,62 @@ public class GameController {
         }
     }
 
+    /**
+     * Ends the current game, updates scores, and announces the game winner.
+     */
     private void handleEndGame() {
-        System.out.println("Ending current game!");
+        System.out.println(GAME_END_MESSAGE);
         updateScoreAndAnnounceWinner(false);
         gameService.setGameOver(true);
         System.out.println(HORIZONTAL_DIVIDER);
     }
 
+    /**
+     * Ends the match, updates scores, and announces the match winner.
+     */
     private void handleEndMatch() {
-        System.out.println("Ending the current match...");
+        System.out.println(MATCH_END_MESSAGE);
         updateScoreAndAnnounceWinner(true);
         matchManager.setMatchOver(true);
         System.out.println(HORIZONTAL_DIVIDER);
         System.out.println(HORIZONTAL_DIVIDER);
     }
 
+    /**
+     * Quits the game, updates scores, and displays a farewell message.
+     */
     private void handleQuit() {
         updateScoreAndAnnounceWinner(true);
         System.out.println(QUIT_MESSAGE);
         commandParser.close();
     }
 
+    /**
+     * Updates the score and announces the winner of the game or match.
+     *
+     * @param matchEnd true if the match is ending, false if a single game is ending.
+     */
     private void updateScoreAndAnnounceWinner(boolean matchEnd) {
         gameService.updateScore();
         announceWinner(matchEnd);
     }
 
+    /**
+     * Announces the winner of the game or match.
+     *
+     * @param matchEnd true if the match is ending, false if a single game is ending.
+     */
     private void announceWinner(boolean matchEnd) {
         String winner = matchManager.getWinnerName();
-
         if(matchEnd)
-            System.out.println("Match Over! "+ (winner.equals("Draw") ? "It's a draw!" : winner+" wins!!"));
+            System.out.println(MATCH_OVER_MESSAGE+ (winner.equals(DRAW_CONDITION) ? "It's a draw!" : winner+" wins!!"));
         else
-            System.out.println("Game Over! " + (winner.equals("Draw") ? "It's a draw!" : winner + " wins the current game!"));
+            System.out.println(GAME_OVER_MESSAGE + (winner.equals(DRAW_CONDITION) ? "It's a draw!" : winner + " wins the current game!"));
     }
 
+    /**
+     * Displays a list of available commands to the player.
+     */
     private void displayHint() {
         System.out.println(HORIZONTAL_DIVIDER);
         System.out.println("Available commands:");
@@ -150,6 +187,12 @@ public class GameController {
 
     }
 
+    /**
+     * Prompts the user for a player name until a non-empty name is provided.
+     *
+     * @param prompt the prompt message to display to the user.
+     * @return the valid player name entered by the user.
+     */
     private String getPlayerName(String prompt) {
         while (true) {
             System.out.print(prompt);
@@ -157,23 +200,28 @@ public class GameController {
             if (!name.isEmpty()) {
                 return name;
             }
-            System.out.println("Player name cannot be empty. Please try again.");
+            System.out.println(EMPTY_PLAYER_NAME_MESSAGE);
         }
     }
 
+    /**
+     * Prompts the user for a valid match length (positive integer).
+     *
+     * @return the valid match length entered by the user.
+     */
     private int getValidMatchLength() {
         while (true) {
-            System.out.print("Enter the match length (e.g., 3, 5, 7): ");
+            System.out.print(MATCH_LENGTH_INPUT_PROMPT);
             String input = commandParser.getUserInput();
             try {
                 int matchLength = Integer.parseInt(input);
                 if (matchLength > 0) {
                     return matchLength;
                 } else {
-                    System.out.println("Match length must be a positive integer. Try again.");
+                    System.out.println(POSITIVE_MATCH_LENGTH_MESSAGE);
                 }
             } catch (NumberFormatException e) {
-                System.out.println("Invalid input. Please enter a valid number for match length.");
+                System.out.println(INVALID_MATCH_LENGTH_INPUT_MESSAGE);
             }
         }
     }
