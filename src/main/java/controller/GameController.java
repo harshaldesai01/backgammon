@@ -17,12 +17,16 @@ public class GameController {
     private final CommandParser commandParser;
     private MatchManager matchManager;
     private GameService gameService;
+    private boolean quit = false;
 
     /**
      * Initializes the GameController with necessary utilities such as the CommandParser.
      */
     public GameController() {
         this.commandParser = new CommandParser();
+    }
+    public GameController(CommandParser cd) {
+        this.commandParser = cd;
     }
 
     /**
@@ -31,9 +35,13 @@ public class GameController {
     public void startGame() {
         System.out.println(WELCOME_MESSAGE);
 
-        while (true) {
+        while (!quit) {
             setupNewMatch();
             playMatch();
+
+            if(quit) {
+                break;
+            }
 
             System.out.print(NEW_MATCH_PROMPT);
             String response = commandParser.getUserInput();
@@ -61,11 +69,11 @@ public class GameController {
      * Manages the match gameplay until the match is completed.
      */
     private void playMatch() {
-        while (!matchManager.isMatchOver()) {
+        while (!matchManager.isMatchOver() && !quit) {
             System.out.println(HORIZONTAL_DIVIDER);
             playSingleGame();
 
-            if(!matchManager.isMatchOver()) {
+            if(!matchManager.isMatchOver() && !quit) {
                 matchManager.incrementGamesPlayed();
             }
         }
@@ -77,7 +85,7 @@ public class GameController {
     private void playSingleGame() {
         gameService.setUpGame();
 
-        while (!gameService.isGameOver()) {
+        while (!gameService.isGameOver() && !quit) {
             gameService.displayGameState();
 
             String input = commandParser.getUserInput();
@@ -98,7 +106,7 @@ public class GameController {
                 switch (command.getType()) {
                     case QUIT -> {
                         handleQuit();
-                        System.exit(0);
+                        return;
                     }
                     case HINT -> displayHint();
                     case END_GAME -> {
@@ -149,6 +157,7 @@ public class GameController {
     private void handleQuit() {
         updateScoreAndAnnounceWinner(true);
         System.out.println(QUIT_MESSAGE);
+        quit = true;
         commandParser.close();
     }
 
