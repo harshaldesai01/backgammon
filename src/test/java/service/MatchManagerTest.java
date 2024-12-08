@@ -57,7 +57,7 @@ class MatchManagerTest {
         matchManager.incrementGamesPlayed();
         matchManager.incrementGamesPlayed();
 
-        assertEquals(3, matchManager.getGamesNumber(), "Games played should be 3 after incrementing twice.");
+        assertEquals(3, matchManager.getCurrentGameNumber(), "Games played should be 3 after incrementing twice.");
     }
 
     @Test
@@ -101,7 +101,7 @@ class MatchManagerTest {
     void testGetGamesNumber() {
         matchManager.incrementGamesPlayed();
 
-        assertEquals(2, matchManager.getGamesNumber(), "Games played should be 2 after incrementing once.");
+        assertEquals(2, matchManager.getCurrentGameNumber(), "Games played should be 2 after incrementing once.");
     }
 
     @Test

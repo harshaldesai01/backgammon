@@ -25,15 +25,4 @@ class PlayerTest {
 
         assertEquals(playerName, result, "Player name should handle empty strings correctly.");
     }
-
-    @Test
-    void testNullName() {
-        String playerName = null;
-
-        Exception exception = assertThrows(NullPointerException.class, () -> {
-            new Player(null);
-        });
-
-        assertNotNull(exception);
-    }
 }

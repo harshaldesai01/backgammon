@@ -5,13 +5,28 @@ import exceptions.InvalidCommandException;
 
 import java.util.Scanner;
 
+/**
+ * Parses user input into game commands and handles invalid input.
+ */
 public class CommandParser {
     private final Scanner scanner = new Scanner(System.in);
 
+    /**
+     * Retrieves input from the user.
+     *
+     * @return the trimmed input string.
+     */
     public String getUserInput() {
         return scanner.nextLine().trim();
     }
 
+    /**
+     * Parses a user input string into a Command object.
+     *
+     * @param input the input string.
+     * @return the parsed Command object.
+     * @throws InvalidCommandException if the input is invalid or unrecognized.
+     */
     public Command parseCommand(String input) throws InvalidCommandException {
         String[] parts = input.split("\\s+");
         try {
@@ -43,6 +58,9 @@ public class CommandParser {
         }
     }
 
+    /**
+     * Closes the input scanner.
+     */
     public void close() {
         scanner.close();
     }
