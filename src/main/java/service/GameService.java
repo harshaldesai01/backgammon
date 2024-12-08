@@ -312,6 +312,8 @@ public class GameService {
         boardService.displayBoard();
 
         System.out.println("It's " + currentPlayer.getName() + "'s turn.");
+        System.out.println(matchManager.getPlayer1().getName()==currentPlayer.getName()?"Your Checker is: (O)":"Your Checker is: (X)");
+
         System.out.println(currentPlayer.getName() + "'s pip count: " + calculatePipCount(currentPlayer));
     }
 
